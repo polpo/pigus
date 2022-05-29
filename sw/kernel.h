@@ -11,7 +11,7 @@
 #include <circle/logger.h>
 #include <circle/spinlock.h>
 
-#include "adlibemu.h"
+#include "soundcardemu.h"
 
 enum TShutdownMode
 {
@@ -40,5 +40,5 @@ private:
     CInterruptSystem m_Interrupt;
 	CScheduler m_Scheduler;
 
-    AdlibEmu      m_AdlibEmu;
+    SoundcardEmu*      m_pSoundcardEmu;
 };

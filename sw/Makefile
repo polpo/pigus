@@ -3,7 +3,7 @@ include vendor/circle-stdlib/Config.mk
 CIRCLEHOME = vendor/circle-stdlib/libs/circle
 NEWLIBDIR = vendor/circle-stdlib/install/$(NEWLIB_ARCH)
 
-OBJS	= main.o kernel.o adlibemu.o opl.o
+OBJS	= main.o kernel.o soundcardemu.o adlibemu.o opl.o
 
 include $(CIRCLEHOME)/Rules.mk
 

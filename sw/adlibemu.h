@@ -10,25 +10,22 @@
 #include <circle/logger.h>
 #include <circle/spinlock.h>
 
-#define SNDBUFSIZ 1024
+#include "soundcardemu.h"
 
-class AdlibEmu : public CMultiCoreSupport
+
+class AdlibEmu : public SoundcardEmu
 {
 public:
 	AdlibEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CSpinLock &spinlock);
 	~AdlibEmu(void);
+	
+	boolean Initialize(void) override;
 
-	boolean Initialize(void);
-	void Run(unsigned nCore);
+	TGPIOInterruptHandler* getIOWInterruptHandler() override;
 	static void HandleIOWInterrupt(void *pParam);
 
 private:
-	CLogger	&m_Logger;
-	CInterruptSystem* m_pInterrupt;
-	CSpinLock &m_SpinLock;
-	CPWMSoundBaseDevice *m_sndDevice;
 	u8 adlibCommand[2];
 
-	void MainTask(void);
-	void SoundTask(void); 
+	void RenderSound(s16* buffer, size_t nFrames) override;
 };

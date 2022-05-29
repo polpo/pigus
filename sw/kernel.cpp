@@ -8,13 +8,15 @@
 #include <circle/synchronize.h>
 #include <circle/multicore.h>
 
+#include "adlibemu.h"
+
 CKernel::CKernel(void)
 :
     m_Timer(&m_Interrupt),
     m_Logger(4/*, &m_Timer*/),
-    m_Screen(0, 0),
-    m_AdlibEmu(CMemorySystem::Get(), &m_Interrupt, *m_SpinLock)
+    m_Screen(0, 0)
 {
+    m_pSoundcardEmu = new AdlibEmu(CMemorySystem::Get(), &m_Interrupt, *m_SpinLock);
 }
 
 CKernel::~CKernel(void)
@@ -31,7 +33,7 @@ boolean CKernel::Initialize(void)
     }
     m_Logger.Initialize(pTarget);
     m_Interrupt.Initialize();
-    m_AdlibEmu.Initialize();
+    m_pSoundcardEmu->Initialize();
     return TRUE;
 }
 
@@ -48,12 +50,13 @@ TShutdownMode CKernel::Run(void)
     }
 
     m_Logger.Write("kernel", LogNotice, "set up interrupts");
-    iow_pin.ConnectInterrupt(AdlibEmu::HandleIOWInterrupt, &m_AdlibEmu);
+    /* iow_pin.ConnectInterrupt(AdlibEmu::HandleIOWInterrupt, &m_AdlibEmu); */
+    iow_pin.ConnectInterrupt(m_pSoundcardEmu->getIOWInterruptHandler(), m_pSoundcardEmu);
     iow_pin.EnableInterrupt(GPIOInterruptOnFallingEdge);
 
 
-    m_Logger.Write("kernel", LogNotice, "Running AdlibEmu");
-    m_AdlibEmu.Run(0);
+    m_Logger.Write("kernel", LogNotice, "Running SoundcardEmu");
+    m_pSoundcardEmu->Run(0);
 
     return ShutdownReboot;
 }
