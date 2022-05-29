@@ -1,0 +1,7 @@
+.DS_Store
+*.o
+*.d
+kernel*.img
+kernel*.elf
+kernel*.lst
+kernel*.map
