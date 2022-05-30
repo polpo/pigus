@@ -22,6 +22,7 @@ public:
 	virtual boolean Initialize(void);
 	void Run(unsigned nCore);
 	virtual TGPIOInterruptHandler* getIOWInterruptHandler() = 0;
+	virtual TGPIOInterruptHandler* getIORInterruptHandler() = 0;
 
 protected:
 	CLogger	&m_Logger;

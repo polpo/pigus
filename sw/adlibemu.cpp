@@ -39,6 +39,12 @@ TGPIOInterruptHandler* AdlibEmu::getIOWInterruptHandler()
 }
 
 
+TGPIOInterruptHandler* AdlibEmu::getIORInterruptHandler()
+{
+    return nullptr;
+}
+
+
 void AdlibEmu::HandleIOWInterrupt(void *pParam)
 {
     AdlibEmu* pThis = static_cast<AdlibEmu*>(pParam);

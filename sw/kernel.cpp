@@ -8,15 +8,24 @@
 #include <circle/synchronize.h>
 #include <circle/multicore.h>
 
+#ifdef EMULATE_ADLIB
 #include "adlibemu.h"
+#else
+#include "gusemu.h"
+#endif
 
 CKernel::CKernel(void)
 :
     m_Timer(&m_Interrupt),
     m_Logger(4/*, &m_Timer*/),
-    m_Screen(0, 0)
+    m_Screen(0, 0),
+    m_Manager(&m_Interrupt)
 {
+#ifdef EMULATE_ADLIB
     m_pSoundcardEmu = new AdlibEmu(CMemorySystem::Get(), &m_Interrupt, *m_SpinLock);
+#else
+    m_pSoundcardEmu = new GusEmu(CMemorySystem::Get(), &m_Interrupt, *m_SpinLock);
+#endif
 }
 
 CKernel::~CKernel(void)
@@ -40,8 +49,9 @@ boolean CKernel::Initialize(void)
 TShutdownMode CKernel::Run(void)
 {
     m_Logger.Write("kernel", LogNotice, "init GPIO");
-    CGPIOPinFIQ iow_pin(0, GPIOModeInput, &m_Interrupt);
-    for (unsigned i=1; i < 32; ++i) {
+    CGPIOPin iow_pin(0, GPIOModeInput, &m_Manager);
+    CGPIOPinFIQ ior_pin(0, GPIOModeInput, &m_Interrupt);
+    for (unsigned i=2; i < 32; ++i) {
         CGPIOPin pin(i, i == 27 ? GPIOModeOutput : GPIOModeInput);
         if (i == 27) {
             // Enable level shifters
@@ -50,14 +60,22 @@ TShutdownMode CKernel::Run(void)
     }
 
     m_Logger.Write("kernel", LogNotice, "set up interrupts");
-    /* iow_pin.ConnectInterrupt(AdlibEmu::HandleIOWInterrupt, &m_AdlibEmu); */
-    iow_pin.ConnectInterrupt(m_pSoundcardEmu->getIOWInterruptHandler(), m_pSoundcardEmu);
-    iow_pin.EnableInterrupt(GPIOInterruptOnFallingEdge);
-
+    TGPIOInterruptHandler* iowHandler = m_pSoundcardEmu->getIOWInterruptHandler();
+    if (iowHandler) {
+	iow_pin.ConnectInterrupt(iowHandler, m_pSoundcardEmu);
+	iow_pin.EnableInterrupt(GPIOInterruptOnFallingEdge);
+    }
+    TGPIOInterruptHandler* iorHandler = m_pSoundcardEmu->getIORInterruptHandler();
+    if (iorHandler) {
+	ior_pin.ConnectInterrupt(iorHandler, m_pSoundcardEmu);
+	ior_pin.EnableInterrupt(GPIOInterruptOnFallingEdge);
+	ior_pin.EnableInterrupt2(GPIOInterruptOnRisingEdge);
+    }
 
     m_Logger.Write("kernel", LogNotice, "Running SoundcardEmu");
     m_pSoundcardEmu->Run(0);
 
     return ShutdownReboot;
 }
+
 

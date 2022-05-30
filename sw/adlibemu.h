@@ -22,6 +22,7 @@ public:
 	boolean Initialize(void) override;
 
 	TGPIOInterruptHandler* getIOWInterruptHandler() override;
+	TGPIOInterruptHandler* getIORInterruptHandler() override;
 	static void HandleIOWInterrupt(void *pParam);
 
 private:

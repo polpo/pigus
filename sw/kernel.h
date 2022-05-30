@@ -10,6 +10,7 @@
 #include <circle/sched/scheduler.h>
 #include <circle/logger.h>
 #include <circle/spinlock.h>
+#include <circle/gpiomanager.h>
 
 #include "soundcardemu.h"
 
@@ -27,9 +28,10 @@ public:
     ~CKernel (void);
 
     boolean Initialize (void);
-
     TShutdownMode Run (void);
+
     CSpinLock *m_SpinLock;
+
 private:
     CActLED m_ActLED;
     CKernelOptions m_Options;
@@ -38,7 +40,8 @@ private:
     CLogger m_Logger;
     CScreenDevice m_Screen;
     CInterruptSystem m_Interrupt;
-	CScheduler m_Scheduler;
+    CScheduler m_Scheduler;
+    CGPIOManager m_Manager;
 
-    SoundcardEmu*      m_pSoundcardEmu;
+    SoundcardEmu* m_pSoundcardEmu;
 };
