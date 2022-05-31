@@ -752,7 +752,7 @@ void Gus::PrintStats()
 
 uint16_t Gus::ReadFromPort(const io_port_t port, io_width_t width)
 {
-	//	LOG_MSG("GUS: Read from port %x", port);
+	LOG_MSG("GUS: Read from port %x", port);
 	switch (port - port_base) {
 	case 0x206: return irq_status;
 	case 0x208:
@@ -793,7 +793,7 @@ uint16_t Gus::ReadFromPort(const io_port_t port, io_width_t width)
 
 uint16_t Gus::ReadFromRegister()
 {
-	// LOG_MSG("GUS: Read register %x", selected_register);
+	LOG_MSG("GUS: Read register %x", selected_register);
 	uint8_t reg = 0;
 
 	// Registers that read from the general DSP
@@ -987,7 +987,7 @@ void Gus::WriteToPort(io_port_t port, io_val_t value, io_width_t width)
 {
 	const auto val = check_cast<uint16_t>(value);
 
-	//	LOG_MSG("GUS: Write to port %x val %x", port, val);
+	LOG_MSG("GUS: Write to port %x val %x", port, val);
 	switch (port - port_base) {
 	case 0x200:
 		mix_ctrl = static_cast<uint8_t>(val);
@@ -1072,7 +1072,7 @@ void Gus::WriteToPort(io_port_t port, io_val_t value, io_width_t width)
 		break;
 	default:
 #if LOG_GUS
-		LOG_MSG("GUS: Write to port %#x with value %x", port, val);
+		LOG_MSG("GUS: Unsupported Write to port %#x with value %x", port, val);
 #endif
 		break;
 	}

@@ -8,6 +8,8 @@
 #include <circle/synchronize.h>
 #include <circle/multicore.h>
 
+#define EMULATE_ADLIB
+
 #ifdef EMULATE_ADLIB
 #include "adlibemu.h"
 #else
@@ -16,6 +18,7 @@
 
 CKernel::CKernel(void)
 :
+    /* m_CPUThrottle(CPUSpeedLow), */
     m_Timer(&m_Interrupt),
     m_Logger(4/*, &m_Timer*/),
     m_Screen(0, 0),
@@ -42,7 +45,9 @@ boolean CKernel::Initialize(void)
     }
     m_Logger.Initialize(pTarget);
     m_Interrupt.Initialize();
+    m_Manager.Initialize();
     m_pSoundcardEmu->Initialize();
+    m_CPUThrottle.SetSpeed(CPUSpeedMaximum);
     return TRUE;
 }
 
@@ -50,7 +55,8 @@ TShutdownMode CKernel::Run(void)
 {
     m_Logger.Write("kernel", LogNotice, "init GPIO");
     CGPIOPin iow_pin(0, GPIOModeInput, &m_Manager);
-    CGPIOPinFIQ ior_pin(0, GPIOModeInput, &m_Interrupt);
+    //CGPIOPinFIQ iow_pin(0, GPIOModeInput, &m_Interrupt);
+    //CGPIOPinFIQ ior_pin(1, GPIOModeInput, &m_Interrupt);
     for (unsigned i=2; i < 32; ++i) {
         CGPIOPin pin(i, i == 27 ? GPIOModeOutput : GPIOModeInput);
         if (i == 27) {
@@ -65,12 +71,14 @@ TShutdownMode CKernel::Run(void)
 	iow_pin.ConnectInterrupt(iowHandler, m_pSoundcardEmu);
 	iow_pin.EnableInterrupt(GPIOInterruptOnFallingEdge);
     }
+    /*
     TGPIOInterruptHandler* iorHandler = m_pSoundcardEmu->getIORInterruptHandler();
     if (iorHandler) {
 	ior_pin.ConnectInterrupt(iorHandler, m_pSoundcardEmu);
 	ior_pin.EnableInterrupt(GPIOInterruptOnFallingEdge);
 	ior_pin.EnableInterrupt2(GPIOInterruptOnRisingEdge);
     }
+    */
 
     m_Logger.Write("kernel", LogNotice, "Running SoundcardEmu");
     m_pSoundcardEmu->Run(0);

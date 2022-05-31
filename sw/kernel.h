@@ -11,6 +11,7 @@
 #include <circle/logger.h>
 #include <circle/spinlock.h>
 #include <circle/gpiomanager.h>
+#include <circle/cputhrottle.h>
 
 #include "soundcardemu.h"
 
@@ -42,6 +43,7 @@ private:
     CInterruptSystem m_Interrupt;
     CScheduler m_Scheduler;
     CGPIOManager m_Manager;
+    CCPUThrottle m_CPUThrottle;
 
     SoundcardEmu* m_pSoundcardEmu;
 };
