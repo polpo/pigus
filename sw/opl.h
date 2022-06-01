@@ -210,5 +210,4 @@ void adlib_getsample(Bit16s* sndptr, Bits numsamples);
 Bitu adlib_reg_read(Bitu port);
 void adlib_write_index(Bitu port, Bit8u val);
 
-static Bit32u generator_add;	// should be a chip parameter
 

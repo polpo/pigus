@@ -36,4 +36,5 @@ private:
 
 	void MainTask(void);
 	void SoundTask(void); 
+	void IOTask(void); 
 };

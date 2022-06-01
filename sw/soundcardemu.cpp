@@ -39,7 +39,11 @@ boolean SoundcardEmu::Initialize(void)
 
 
 void SoundcardEmu::MainTask(void) {
+#ifdef USE_INTERRUPTS
     m_Logger.Write("SoundcardEmu", LogNotice, "MainTask starting up (and not doing anything - using interrupts!)");
+#else
+    m_Logger.Write("SoundcardEmu", LogNotice, "MainTask starting up (and not doing anything - using polling in IOTask!)");
+#endif
     CScheduler* const pScheduler = CScheduler::Get();
     for (;;) {
         pScheduler->Yield();
@@ -72,12 +76,40 @@ void SoundcardEmu::SoundTask(void) {
 }
 
 
+void SoundcardEmu::IOTask(void) {
+    m_Logger.Write("SoundcardEmu", LogNotice, "IOTask starting up");
+
+    u8 curr_iow, last_iow = 1, curr_ior, last_ior = 1;
+    u32 gpios;
+
+    for (;;) {
+	gpios = CGPIOPin::ReadAll();
+	curr_iow = gpios & 0x1;
+	curr_ior = (gpios & 0x2) >> 0x1;
+
+	if (curr_iow < last_iow) {  // falling edge of ~IOW
+	    getIOWInterruptHandler()(this);
+	}
+
+	if (curr_ior < last_ior) {  // falling edge of ~IOR
+	}
+
+	last_iow = curr_iow;
+	last_ior = curr_ior;
+    }
+}
+
+
 void SoundcardEmu::Run(unsigned nCore) {
     switch (nCore) {
     case 0:
         return MainTask();
     case 1:
         return SoundTask();
+#ifndef USE_INTERRUPTS
+    case 2:
+        return IOTask();
+#endif
     default:
         return;
     }

@@ -54,9 +54,13 @@ boolean CKernel::Initialize(void)
 TShutdownMode CKernel::Run(void)
 {
     m_Logger.Write("kernel", LogNotice, "init GPIO");
+#ifdef USE_INTERRUPTS
     CGPIOPin iow_pin(0, GPIOModeInput, &m_Manager);
-    //CGPIOPinFIQ iow_pin(0, GPIOModeInput, &m_Interrupt);
-    //CGPIOPinFIQ ior_pin(1, GPIOModeInput, &m_Interrupt);
+    CGPIOPinFIQ ior_pin(1, GPIOModeInput, &m_Interrupt);
+#else
+    CGPIOPin iow_pin(0, GPIOModeInput);
+    CGPIOPin ior_pin(1, GPIOModeInput);
+#endif
     for (unsigned i=2; i < 32; ++i) {
         CGPIOPin pin(i, i == 27 ? GPIOModeOutput : GPIOModeInput);
         if (i == 27) {
@@ -65,6 +69,7 @@ TShutdownMode CKernel::Run(void)
         }
     }
 
+#ifdef USE_INTERRUPTS
     m_Logger.Write("kernel", LogNotice, "set up interrupts");
     TGPIOInterruptHandler* iowHandler = m_pSoundcardEmu->getIOWInterruptHandler();
     if (iowHandler) {
@@ -79,6 +84,7 @@ TShutdownMode CKernel::Run(void)
 	ior_pin.EnableInterrupt2(GPIOInterruptOnRisingEdge);
     }
     */
+#endif
 
     m_Logger.Write("kernel", LogNotice, "Running SoundcardEmu");
     m_pSoundcardEmu->Run(0);
