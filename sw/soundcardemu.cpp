@@ -89,12 +89,17 @@ void SoundcardEmu::IOTask(void) {
 	curr_iow = gpios & 0x1;
 	curr_ior = (gpios & 0x2) >> 0x1;
 
+        u16 port = ((gpios >> 12) & 0x3FF) - 0x40;
+        if (!(port & 0x200)) {
+            continue;
+        }
+
 	if (curr_iow < last_iow) {  // falling edge of ~IOW
-	    CMultiCoreSupport::SendIPI(0, IPI_IOW);
+	    CMultiCoreSupport::SendIPI(3, IPI_IOW);
 	}
 	// Be careful of race conditions here -- should this be an else if?
-	if (curr_ior < last_ior) {  // falling edge of ~IOR
-	    CMultiCoreSupport::SendIPI(0, IPI_IOR);
+	if (curr_ior != last_ior) {  // rising falling edge of ~IOR
+	    CMultiCoreSupport::SendIPI(3, IPI_IOR);
 	}
 
 	last_iow = curr_iow;
@@ -112,6 +117,8 @@ void SoundcardEmu::Run(unsigned nCore) {
 #ifndef USE_INTERRUPTS
     case 2:
         return IOTask();
+    case 3:
+        for (;;) {}
 #endif
     default:
         return;
@@ -119,7 +126,7 @@ void SoundcardEmu::Run(unsigned nCore) {
 }
 
 void SoundcardEmu::IPIHandler(unsigned nCore, unsigned nIPI) {
-    if (nCore != 0 || nIPI < IPI_USER) {
+    if (nCore != 3 || nIPI < IPI_USER) {
 	return CMultiCoreSupport::IPIHandler(nCore, nIPI);
     }
     switch (nIPI) {

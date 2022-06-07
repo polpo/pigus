@@ -9,6 +9,9 @@ GusEmu::GusEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CSpin
     SoundcardEmu(pMemorySystem, pInterrupt, spinlock)
 {
     gus = std::make_unique<Gus>(GUS_PORT, 1, 5, "", m_Logger);
+    for (size_t i = 0; i < m_DataPins.size(); i++) {
+        m_DataPins[i] = new CGPIOPin(i, GPIOModeInput);
+    }
 }
 
 GusEmu::~GusEmu(void) {}
@@ -28,6 +31,8 @@ boolean GusEmu::Initialize(void)
 
 void GusEmu::RenderSound(s16* buffer, size_t nFrames)
 {
+    // enjoy the silence
+    memset(buffer, 0, nFrames * 2 * sizeof(s16));
 //    adlib_getsample(buffer, nFrames);
 }
 
@@ -47,6 +52,7 @@ TGPIOInterruptHandler* GusEmu::getIORInterruptHandler()
 void GusEmu::HandleIOWInterrupt(void *pParam)
 {
     GusEmu* pThis = static_cast<GusEmu*>(pParam);
+    /* pThis->m_Logger.Write("GusEmu", LogNotice, "IOW"); */
 #ifdef USE_INTERRUPTS
     u32 gpios = CGPIOPin::ReadAll();
 #else
@@ -65,9 +71,10 @@ void GusEmu::HandleIOWInterrupt(void *pParam)
         // Board Only
         case 0x200:
         case 0x20b:
-	    value = (gpios >> 4) & 0xFF;
+            value = (gpios >> 4) & 0xFF;
             // let's a go
             pThis->gus->WriteToPort(port, value, io_width_t::byte);
+            CActLED::Get()->Blink(1);
             break;
     }
 }
@@ -76,6 +83,7 @@ void GusEmu::HandleIOWInterrupt(void *pParam)
 void GusEmu::HandleIORInterrupt(void *pParam)
 {
     GusEmu* pThis = static_cast<GusEmu*>(pParam);
+    //pThis->m_Logger.Write("GusEmu", LogNotice, "IOR");
 #ifdef USE_INTERRUPTS
     u32 gpios = CGPIOPin::ReadAll();
 #else
@@ -92,20 +100,28 @@ void GusEmu::HandleIORInterrupt(void *pParam)
         case 0x206:
         case 0x208:
         case 0x307:
-	// Board Only
+        // Board Only
         case 0x20a:
-            if (gpios & 0x2) {
+            if (!(gpios & 0x2)) {
+                // falling edge - read data
+                for (size_t i = 0; i < 8; ++i) {
+                    pThis->m_DataPins[i]->SetMode(GPIOModeOutput);
+                }
+                //value = pThis->gus->ReadFromPort(port, io_width_t::byte);
+                value = 0xAA;
+                CGPIOPin::WriteAll(value << 4, 0xFF0);
+                CActLED::Get()->On();
+            } else {
+                /*
                 // rising edge - Set data pins back to inputs
                 for (unsigned i=4; i < 12; ++i) {
                     CGPIOPin pin(i, GPIOModeInput);
                 }
-            } else {
-                // falling edge - read data
-                value = pThis->gus->ReadFromPort(port, io_width_t::byte);
-                for (unsigned i=4; i < 12; ++i) {
-                    CGPIOPin pin(i, GPIOModeOutput);
+                for (size_t i = 0; i < 8; ++i) {
+                    pThis->m_DataPins[i]->SetMode(GPIOModeInput);
                 }
-                CGPIOPin::WriteAll(value << 4, 0xFF0);
+                */
+                /* CActLED::Get()->Off(); */
             }
             break;
     }

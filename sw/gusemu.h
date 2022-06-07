@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <array>
 
 #include <circle/actled.h>
 #include <circle/multicore.h>
@@ -13,8 +14,8 @@
 #include "gus.h"
 
 
-#define GUS_PORT 0x240u
-#define GUS_PORT_BASE GUS_PORT - 0x200u
+#define GUS_PORT 0x240
+#define GUS_PORT_BASE 0x40
 
 class GusEmu : public SoundcardEmu
 {
@@ -32,6 +33,7 @@ public:
 private:
     /* Gus *gus; */                
     std::unique_ptr<Gus> gus = nullptr;
+    std::array<CGPIOPin*, 8> m_DataPins;
 
     void RenderSound(s16* buffer, size_t nFrames) override;
 };

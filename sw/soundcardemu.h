@@ -11,8 +11,8 @@
 #include <circle/spinlock.h>
 #include <circle/gpiopin.h>
 
-#define IPI_IOW IPI_USER
-#define IPI_IOR IPI_USER + 1
+#define IPI_IOW 10
+#define IPI_IOR 11
 
 #define SNDBUFSIZ 256
 

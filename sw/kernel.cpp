@@ -8,7 +8,7 @@
 #include <circle/synchronize.h>
 #include <circle/multicore.h>
 
-#define EMULATE_ADLIB
+//#define EMULATE_ADLIB
 
 #ifdef EMULATE_ADLIB
 #include "adlibemu.h"
@@ -47,7 +47,7 @@ boolean CKernel::Initialize(void)
     m_Interrupt.Initialize();
     m_Manager.Initialize();
     m_pSoundcardEmu->Initialize();
-    m_CPUThrottle.SetSpeed(CPUSpeedMaximum);
+    //m_CPUThrottle.SetSpeed(CPUSpeedMaximum);
     return TRUE;
 }
 
@@ -68,6 +68,7 @@ TShutdownMode CKernel::Run(void)
             pin.Write(1);
         }
     }
+
 
 #ifdef USE_INTERRUPTS
     m_Logger.Write("kernel", LogNotice, "set up interrupts");
