@@ -80,7 +80,9 @@ void SoundcardEmu::IOTask(void) {
     m_Logger.Write("SoundcardEmu", LogNotice, "IOTask starting up");
 
     u8 curr_iow, last_iow = 1, curr_ior, last_ior = 1;
+#ifdef USE_INTERRUPTS
     u32 gpios;
+#endif
 
     for (;;) {
 	gpios = CGPIOPin::ReadAll();
@@ -88,10 +90,11 @@ void SoundcardEmu::IOTask(void) {
 	curr_ior = (gpios & 0x2) >> 0x1;
 
 	if (curr_iow < last_iow) {  // falling edge of ~IOW
-	    getIOWInterruptHandler()(this);
+	    CMultiCoreSupport::SendIPI(0, IPI_IOW);
 	}
-
+	// Be careful of race conditions here -- should this be an else if?
 	if (curr_ior < last_ior) {  // falling edge of ~IOR
+	    CMultiCoreSupport::SendIPI(0, IPI_IOR);
 	}
 
 	last_iow = curr_iow;
@@ -112,5 +115,21 @@ void SoundcardEmu::Run(unsigned nCore) {
 #endif
     default:
         return;
+    }
+}
+
+void SoundcardEmu::IPIHandler(unsigned nCore, unsigned nIPI) {
+    if (nCore != 0 || nIPI < IPI_USER) {
+	return CMultiCoreSupport::IPIHandler(nCore, nIPI);
+    }
+    switch (nIPI) {
+    case IPI_IOW:
+	getIOWInterruptHandler()(this);
+	break;
+    case IPI_IOR:
+	getIORInterruptHandler()(this);
+	break;
+    default:
+        m_Logger.Write("SoundcardEmu", LogPanic, "Received unhandled IPI %d", nIPI);
     }
 }

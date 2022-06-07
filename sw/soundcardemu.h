@@ -11,6 +11,9 @@
 #include <circle/spinlock.h>
 #include <circle/gpiopin.h>
 
+#define IPI_IOW IPI_USER
+#define IPI_IOR IPI_USER + 1
+
 #define SNDBUFSIZ 256
 
 class SoundcardEmu : public CMultiCoreSupport
@@ -28,7 +31,11 @@ protected:
 	CLogger	&m_Logger;
 	CInterruptSystem* m_pInterrupt;
 	CSpinLock &m_SpinLock;
+#ifndef USE_INTERRUPTS
+	u32 gpios;
+#endif
 
+	void IPIHandler(unsigned nCore, unsigned nIPI) override;
 	virtual void RenderSound(s16* buffer, size_t nFrames) = 0;
 
 private:

@@ -24,6 +24,7 @@ public:
 	TGPIOInterruptHandler* getIOWInterruptHandler() override;
 	TGPIOInterruptHandler* getIORInterruptHandler() override;
 	static void HandleIOWInterrupt(void *pParam);
+	static void HandleIORInterrupt(void *pParam) {};
 
 private:
 	u8 adlibCommand[2];

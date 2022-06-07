@@ -41,22 +41,27 @@ TGPIOInterruptHandler* AdlibEmu::getIOWInterruptHandler()
 
 TGPIOInterruptHandler* AdlibEmu::getIORInterruptHandler()
 {
-    return nullptr;
+    return AdlibEmu::HandleIORInterrupt;
 }
 
 
 void AdlibEmu::HandleIOWInterrupt(void *pParam)
 {
     AdlibEmu* pThis = static_cast<AdlibEmu*>(pParam);
-    u32 porta = CGPIOPin::ReadAll();
-    switch ((porta >> 12) & 0x3FF) {
+#ifdef USE_INTERRUPTS
+    // If we are using interrupts, read GPIOs here. Otherwise will already be populated.
+    u32 gpios = CGPIOPin::ReadAll();
+#else
+    u32 gpios = pThis->gpios;
+#endif
+    switch ((gpios >> 12) & 0x3FF) {
         case 0x388:
             /* CActLED::Get()->On(); */
-	    pThis->adlibCommand[0] = (porta >> 4) & 0xFF;
+	    pThis->adlibCommand[0] = (gpios >> 4) & 0xFF;
             break;
         case 0x389:
             /* CActLED::Get()->Off(); */
-	    pThis->adlibCommand[1] = (porta >> 4) & 0xFF;
+	    pThis->adlibCommand[1] = (gpios >> 4) & 0xFF;
             adlib_write(pThis->adlibCommand[0], pThis->adlibCommand[1]);
 	    DataSyncBarrier();
             break;

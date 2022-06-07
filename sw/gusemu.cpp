@@ -47,8 +47,12 @@ TGPIOInterruptHandler* GusEmu::getIORInterruptHandler()
 void GusEmu::HandleIOWInterrupt(void *pParam)
 {
     GusEmu* pThis = static_cast<GusEmu*>(pParam);
-    u32 porta = CGPIOPin::ReadAll();
-    io_port_t port = ((porta >> 12) & 0x3FF) - GUS_PORT_BASE;
+#ifdef USE_INTERRUPTS
+    u32 gpios = CGPIOPin::ReadAll();
+#else
+    u32 gpios = pThis->gpios;
+#endif
+    io_port_t port = ((gpios >> 12) & 0x3FF) - GUS_PORT_BASE;
     io_val_t value;
     switch (port) {
         case 0x302:
@@ -61,7 +65,7 @@ void GusEmu::HandleIOWInterrupt(void *pParam)
         // Board Only
         case 0x200:
         case 0x20b:
-	    value = (porta >> 4) & 0xFF;
+	    value = (gpios >> 4) & 0xFF;
             // let's a go
             pThis->gus->WriteToPort(port, value, io_width_t::byte);
             break;
@@ -72,9 +76,13 @@ void GusEmu::HandleIOWInterrupt(void *pParam)
 void GusEmu::HandleIORInterrupt(void *pParam)
 {
     GusEmu* pThis = static_cast<GusEmu*>(pParam);
-    u32 porta = CGPIOPin::ReadAll();
+#ifdef USE_INTERRUPTS
+    u32 gpios = CGPIOPin::ReadAll();
+#else
+    u32 gpios = pThis->gpios;
+#endif
 
-    io_port_t port = ((porta >> 12) & 0x3FF) - GUS_PORT_BASE;
+    io_port_t port = ((gpios >> 12) & 0x3FF) - GUS_PORT_BASE;
     io_val_t value;
     switch (port) {
         case 0x302:
@@ -86,7 +94,7 @@ void GusEmu::HandleIORInterrupt(void *pParam)
         case 0x307:
 	// Board Only
         case 0x20a:
-            if (porta & 0x2) {
+            if (gpios & 0x2) {
                 // rising edge - Set data pins back to inputs
                 for (unsigned i=4; i < 12; ++i) {
                     CGPIOPin pin(i, GPIOModeInput);
