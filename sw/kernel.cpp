@@ -47,7 +47,7 @@ boolean CKernel::Initialize(void)
     m_Interrupt.Initialize();
     m_Manager.Initialize();
     m_pSoundcardEmu->Initialize();
-    //m_CPUThrottle.SetSpeed(CPUSpeedMaximum);
+    m_CPUThrottle.SetSpeed(CPUSpeedMaximum);
     return TRUE;
 }
 
@@ -57,6 +57,10 @@ TShutdownMode CKernel::Run(void)
 #ifdef USE_INTERRUPTS
     CGPIOPin iow_pin(0, GPIOModeInput, &m_Manager);
     CGPIOPinFIQ ior_pin(1, GPIOModeInput, &m_Interrupt);
+    /*
+    CGPIOPinFIQ iow_pin(0, GPIOModeInput, &m_Interrupt);
+    CGPIOPin ior_pin(1, GPIOModeInput, &m_Manager);
+    */
 #else
     CGPIOPin iow_pin(0, GPIOModeInput);
     CGPIOPin ior_pin(1, GPIOModeInput);
@@ -77,14 +81,12 @@ TShutdownMode CKernel::Run(void)
 	iow_pin.ConnectInterrupt(iowHandler, m_pSoundcardEmu);
 	iow_pin.EnableInterrupt(GPIOInterruptOnFallingEdge);
     }
-    /*
     TGPIOInterruptHandler* iorHandler = m_pSoundcardEmu->getIORInterruptHandler();
     if (iorHandler) {
 	ior_pin.ConnectInterrupt(iorHandler, m_pSoundcardEmu);
 	ior_pin.EnableInterrupt(GPIOInterruptOnFallingEdge);
 	ior_pin.EnableInterrupt2(GPIOInterruptOnRisingEdge);
     }
-    */
 #endif
 
     m_Logger.Write("kernel", LogNotice, "Running SoundcardEmu");

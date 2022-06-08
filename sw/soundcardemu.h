@@ -38,6 +38,10 @@ protected:
 	void IPIHandler(unsigned nCore, unsigned nIPI) override;
 	virtual void RenderSound(s16* buffer, size_t nFrames) = 0;
 
+	static void FastGPIOWriteData(u8 value, boolean setOutput = FALSE);
+	static void FastGPIOClear(void);
+	static u32 FastGPIORead(void);
+
 private:
 	CPWMSoundBaseDevice *m_sndDevice;
 

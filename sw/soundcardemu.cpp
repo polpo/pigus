@@ -1,6 +1,8 @@
 #include <circle/sysconfig.h>
 #include <circle/memorymap.h>
 #include <circle/sched/scheduler.h>
+#include <circle/bcm2835.h>
+#include <circle/memio.h>
 #include <circle/gpiopin.h>
 #include <circle/gpiopinfiq.h>
 
@@ -99,7 +101,8 @@ void SoundcardEmu::IOTask(void) {
 	}
 	// Be careful of race conditions here -- should this be an else if?
 	if (curr_ior != last_ior) {  // rising falling edge of ~IOR
-	    CMultiCoreSupport::SendIPI(3, IPI_IOR);
+            getIORInterruptHandler()(this);
+	    //CMultiCoreSupport::SendIPI(3, IPI_IOR);
 	}
 
 	last_iow = curr_iow;
@@ -117,9 +120,9 @@ void SoundcardEmu::Run(unsigned nCore) {
 #ifndef USE_INTERRUPTS
     case 2:
         return IOTask();
+#endif
     case 3:
         for (;;) {}
-#endif
     default:
         return;
     }
@@ -139,4 +142,29 @@ void SoundcardEmu::IPIHandler(unsigned nCore, unsigned nIPI) {
     default:
         m_Logger.Write("SoundcardEmu", LogPanic, "Received unhandled IPI %d", nIPI);
     }
+}
+
+
+void SoundcardEmu::FastGPIOWriteData(u8 nValue, boolean setOutput) {
+    // set pins 4-11 as output, leave rest as input
+    write32(ARM_GPIO_GPCLR0, 0xFF0u);
+    write32(ARM_GPIO_GPSET0, (u32)nValue << 4);
+    if (setOutput) {
+        write32(ARM_GPIO_GPFSEL0, 0x9249000u);
+        write32(ARM_GPIO_GPFSEL1, 0x49u);
+    }
+}
+
+
+void SoundcardEmu::FastGPIOClear(void) {
+    // clear all pins
+    write32(ARM_GPIO_GPCLR0, 0xFFFFFFFFu);
+    // set all pins as input
+    write32(ARM_GPIO_GPFSEL0, 0x0u);
+    write32(ARM_GPIO_GPFSEL1, 0x0u);
+}
+
+
+u32 SoundcardEmu::FastGPIORead(void) {
+    return read32(ARM_GPIO_GPLEV0);
 }
