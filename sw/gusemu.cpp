@@ -75,7 +75,7 @@ void GusEmu::HandleIOWInterrupt(void *pParam)
             value = (gpios >> 4) & 0xFF;
             // let's a go
             pThis->gus->WriteToPort(port, value, io_width_t::byte);
-            /* CActLED::Get()->Blink(1); */
+            CActLED::Get()->Blink(1);
             break;
     }
 }
@@ -84,16 +84,16 @@ void GusEmu::HandleIOWInterrupt(void *pParam)
 void GusEmu::HandleIORInterrupt(void *pParam)
 {
     GusEmu* pThis = static_cast<GusEmu*>(pParam);
-    //pThis->m_Logger.Write("GusEmu", LogNotice, "IOR");
 #ifdef USE_INTERRUPTS
-    u32 gpios = CGPIOPin::ReadAll();
-    /* u32 gpios = SoundcardEmu::FastGPIORead(); */
+    /* u32 gpios = CGPIOPin::ReadAll(); */
+    u32 gpios = SoundcardEmu::FastGPIORead();
 #else
     u32 gpios = pThis->gpios;
 #endif
 
     io_port_t port = ((gpios >> 12) & 0x3FF) - GUS_PORT_BASE;
-    io_val_t value;
+    /* pThis->m_Logger.Write("GusEmu", LogNotice, "IOR port %d", port); */
+    uint8_t value;
     switch (port) {
         case 0x302:
         case 0x303:
@@ -116,12 +116,16 @@ void GusEmu::HandleIORInterrupt(void *pParam)
                 /* CGPIOPin::WriteAll(value << 4, 0xFF0); */
                 SoundcardEmu::FastGPIOWriteData(value, TRUE);
                 /* value = 0xAA; */
-                /* /1* CGPIOPin::WriteAll(value << 4, 0xFF0); *1/ */
+                /* CGPIOPin::WriteAll(value << 4, 0xFF0); */
                 /* SoundcardEmu::FastGPIOWriteData(value); */
-                CActLED::Get()->On();
-            } else {
+                /* CActLED::Get()->On(); */
                 /*
+                CTimer::SimpleusDelay(1);
+                SoundcardEmu::FastGPIOClear();
+                */
+            } else {
                 // rising edge - Set data pins back to inputs
+                /*
                 for (unsigned i=4; i < 12; ++i) {
                     CGPIOPin pin(i, GPIOModeInput);
                 }
@@ -129,7 +133,7 @@ void GusEmu::HandleIORInterrupt(void *pParam)
                     pThis->m_DataPins[i]->SetMode(GPIOModeInput);
                 }
                 */
-                SoundcardEmu::FastGPIOClear();
+                /* SoundcardEmu::FastGPIOClear(); */
                 /* CActLED::Get()->Off(); */
             }
             break;

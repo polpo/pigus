@@ -7,8 +7,12 @@
 #include <circle/koptions.h>
 #include <circle/devicenameservice.h>
 #include <circle/screen.h>
+#ifdef USE_BUFFERED_SCREEN
+#include <circle/writebuffer.h>
+#endif
 #include <circle/sched/scheduler.h>
 #include <circle/logger.h>
+#include <circle/timer.h>
 #include <circle/spinlock.h>
 #include <circle/gpiomanager.h>
 #include <circle/cputhrottle.h>
@@ -34,12 +38,20 @@ public:
     CSpinLock *m_SpinLock;
 
 private:
+#ifdef USE_BUFFERED_SCREEN
+    static void PanicHandler(void);
+#endif
     CActLED m_ActLED;
     CKernelOptions m_Options;
     CDeviceNameService m_DeviceNameService;
     CTimer m_Timer;
     CLogger m_Logger;
+#ifdef USE_BUFFERED_SCREEN
+    CScreenDevice m_ScreenUnbuffered;
+    CWriteBufferDevice m_Screen;
+#else
     CScreenDevice m_Screen;
+#endif
     CInterruptSystem m_Interrupt;
     CScheduler m_Scheduler;
     CGPIOManager m_Manager;

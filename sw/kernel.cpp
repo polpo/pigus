@@ -21,7 +21,12 @@ CKernel::CKernel(void)
     /* m_CPUThrottle(CPUSpeedLow), */
     m_Timer(&m_Interrupt),
     m_Logger(4/*, &m_Timer*/),
+#ifdef USE_BUFFERED_SCREEN
+    m_ScreenUnbuffered(0, 0),
+    m_Screen(&m_ScreenUnbuffered),
+#else
     m_Screen(0, 0),
+#endif
     m_Manager(&m_Interrupt)
 {
 #ifdef EMULATE_ADLIB
@@ -37,13 +42,24 @@ CKernel::~CKernel(void)
 
 boolean CKernel::Initialize(void)
 {
+#ifdef USE_BUFFERED_SCREEN
+    m_ScreenUnbuffered.Initialize();
+#else
     m_Screen.Initialize();
+#endif
+    CDevice *pTarget = &m_Screen;
+    /*
     CDevice *pTarget = m_DeviceNameService.GetDevice (
             m_Options.GetLogDevice (), FALSE);
     if (pTarget == 0) {
         pTarget = &m_Screen;
     }
+    */
     m_Logger.Initialize(pTarget);
+    m_Logger.Write("kernel", LogNotice, "Compile time: " __DATE__ " " __TIME__);
+#ifdef USE_BUFFERED_SCREEN
+    m_Logger.RegisterPanicHandler(PanicHandler);
+#endif
     m_Interrupt.Initialize();
     m_Manager.Initialize();
     m_pSoundcardEmu->Initialize();
@@ -90,9 +106,30 @@ TShutdownMode CKernel::Run(void)
 #endif
 
     m_Logger.Write("kernel", LogNotice, "Running SoundcardEmu");
+#ifdef USE_BUFFERED_SCREEN
+    CScheduler* const pScheduler = CScheduler::Get();
+    m_Logger.Write("kernel", LogNotice, "Using buffered screen");
+    for (;;) {
+	m_Screen.Update ();
+        pScheduler->Yield();
+    }
+#else
     m_pSoundcardEmu->Run(0);
+#endif
 
     return ShutdownReboot;
 }
 
 
+#ifdef USE_BUFFERED_SCREEN
+
+void CKernel::PanicHandler (void)		// called on a system panic condition
+{
+    /*
+	EnableIRQs ();				// go to TASK_LEVEL
+
+	s_pThis->m_Screen.Update (2000);	// display all messages before system halt
+    */
+}
+
+#endif

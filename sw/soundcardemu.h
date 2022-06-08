@@ -9,6 +9,7 @@
 #include <circle/pwmsoundbasedevice.h>
 #include <circle/logger.h>
 #include <circle/spinlock.h>
+#include <circle/timer.h>
 #include <circle/gpiopin.h>
 
 #define IPI_IOW 10
