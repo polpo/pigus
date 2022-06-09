@@ -149,8 +149,9 @@ void SoundcardEmu::IPIHandler(unsigned nCore, unsigned nIPI) {
 
 void SoundcardEmu::FastGPIOWriteData(u8 nValue, boolean setOutput) {
     // set pins 4-11 as output, leave rest as input
-    write32(ARM_GPIO_GPCLR0, 0xFF0u);
-    write32(ARM_GPIO_GPSET0, static_cast<u32>(nValue) << 4);
+    u32 shift_value = static_cast<u32>(nValue) << 4;
+    write32(ARM_GPIO_GPCLR0, 0xFF0u & ~shift_value);
+    write32(ARM_GPIO_GPSET0, shift_value);
     if (setOutput) {
         write32(ARM_GPIO_GPFSEL0, 0x9249000u);
         write32(ARM_GPIO_GPFSEL1, 0x49u);
@@ -159,12 +160,13 @@ void SoundcardEmu::FastGPIOWriteData(u8 nValue, boolean setOutput) {
 
 
 void SoundcardEmu::FastGPIOClear(void) {
-    write32(ARM_GPIO_GPSET0, 0x8000FF0u);
+    // be careful of GPIO 27 - it's holding OE on the shifters high!
+    // reset data pins high 
+    write32(ARM_GPIO_GPSET0, 0xFF0u);
     // set lowest 20 GPIO pins as input
     write32(ARM_GPIO_GPFSEL0, 0x0u);
     write32(ARM_GPIO_GPFSEL1, 0x0u);
-    // clear our data pins (except GPIO 27 - it's holding OE on the shifters high!)
-    // 0xF7FFFFFF
+    // clear values
     write32(ARM_GPIO_GPCLR0, 0xFF0u);
 }
 

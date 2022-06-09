@@ -75,7 +75,7 @@ void GusEmu::HandleIOWInterrupt(void *pParam)
             value = (gpios >> 4) & 0xFF;
             // let's a go
             pThis->gus->WriteToPort(port + GUS_PORT_BASE, value, io_width_t::byte);
-            CActLED::Get()->Blink(1);
+            /* CActLED::Get()->Blink(1); */
             break;
     }
 }
@@ -140,13 +140,11 @@ void GusEmu::HandleIORInterrupt(void *pParam)
 }
 
 
+#ifndef USE_INTERRUPTS
 void GusEmu::IOTask(void) {
     m_Logger.Write("GusEmu", LogNotice, "IOTask starting up (overridden)");
 
     u8 curr_iow, last_iow = 1, curr_ior, last_ior = 1;
-#ifdef USE_INTERRUPTS
-    u32 gpios;
-#endif
 
     for (;;) {
 	/* gpios = CGPIOPin::ReadAll(); */
@@ -156,7 +154,7 @@ void GusEmu::IOTask(void) {
 	curr_ior = (gpios & 0x2) >> 0x1;
 #endif
 
-        u16 port = ((gpios >> 12) & 0x3FF) - 0x40;
+        u16 port = ((gpios >> 12) & 0x3FF) - GUS_PORT_BASE;
         if (!(port & 0x200)) {
             continue;
         }
@@ -179,3 +177,4 @@ void GusEmu::IOTask(void) {
 #endif
     }
 }
+#endif

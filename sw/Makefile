@@ -5,10 +5,12 @@ NEWLIBDIR = vendor/circle-stdlib/install/$(NEWLIB_ARCH)
 
 OBJS	= main.o kernel.o soundcardemu.o adlibemu.o opl.o gusemu.o gus.o
 
+OPTIMIZE = -O3
+
 include $(CIRCLEHOME)/Rules.mk
 
 # CFLAGS += -DUSE_INTERRUPTS
-CFLAGS += -DUSE_HYBRID_POLLING
+# CFLAGS += -DUSE_HYBRID_POLLING
 # CFLAGS += -DUSE_BUFFERED_SCREEN
 
 CFLAGS += -I "$(NEWLIBDIR)/include" -I $(STDDEF_INCPATH) -I vendor/circle-stdlib/include
