@@ -7,7 +7,11 @@ OBJS	= main.o kernel.o soundcardemu.o adlibemu.o opl.o gusemu.o gus.o
 
 include $(CIRCLEHOME)/Rules.mk
 
-CFLAGS += -I "$(NEWLIBDIR)/include" -I $(STDDEF_INCPATH) -I vendor/circle-stdlib/include -DUSE_INTERRUPTS #-DUSE_BUFFERED_SCREEN
+# CFLAGS += -DUSE_INTERRUPTS
+CFLAGS += -DUSE_HYBRID_POLLING
+# CFLAGS += -DUSE_BUFFERED_SCREEN
+
+CFLAGS += -I "$(NEWLIBDIR)/include" -I $(STDDEF_INCPATH) -I vendor/circle-stdlib/include
 LIBS := $(NEWLIBDIR)/lib/libm.a \
 	$(NEWLIBDIR)/lib/libc.a \
 	$(NEWLIBDIR)/lib/libcirclenewlib.a \

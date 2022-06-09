@@ -70,13 +70,11 @@ boolean CKernel::Initialize(void)
 TShutdownMode CKernel::Run(void)
 {
     m_Logger.Write("kernel", LogNotice, "init GPIO");
-#ifdef USE_INTERRUPTS
+#if defined USE_INTERRUPTS  || defined USE_HYBRID_POLLING
     CGPIOPin iow_pin(0, GPIOModeInput, &m_Manager);
     CGPIOPinFIQ ior_pin(1, GPIOModeInput, &m_Interrupt);
-    /*
-    CGPIOPinFIQ iow_pin(0, GPIOModeInput, &m_Interrupt);
-    CGPIOPin ior_pin(1, GPIOModeInput, &m_Manager);
-    */
+    /* CGPIOPinFIQ iow_pin(0, GPIOModeInput, &m_Interrupt); */
+    /* CGPIOPin ior_pin(1, GPIOModeInput, &m_Manager); */
 #else
     CGPIOPin iow_pin(0, GPIOModeInput);
     CGPIOPin ior_pin(1, GPIOModeInput);
@@ -90,13 +88,15 @@ TShutdownMode CKernel::Run(void)
     }
 
 
-#ifdef USE_INTERRUPTS
+#if defined USE_INTERRUPTS || defined USE_HYBRID_POLLING
     m_Logger.Write("kernel", LogNotice, "set up interrupts");
+#ifdef USE_INTERRUPTS
     TGPIOInterruptHandler* iowHandler = m_pSoundcardEmu->getIOWInterruptHandler();
     if (iowHandler) {
 	iow_pin.ConnectInterrupt(iowHandler, m_pSoundcardEmu);
 	iow_pin.EnableInterrupt(GPIOInterruptOnFallingEdge);
     }
+#endif
     TGPIOInterruptHandler* iorHandler = m_pSoundcardEmu->getIORInterruptHandler();
     if (iorHandler) {
 	ior_pin.ConnectInterrupt(iorHandler, m_pSoundcardEmu);

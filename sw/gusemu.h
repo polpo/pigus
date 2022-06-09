@@ -27,8 +27,11 @@ public:
 
     TGPIOInterruptHandler* getIOWInterruptHandler() override;
     TGPIOInterruptHandler* getIORInterruptHandler() override;
-    static void HandleIOWInterrupt(void *pParam);
-    static void HandleIORInterrupt(void *pParam);
+    static inline void HandleIOWInterrupt(void *pParam);
+    static inline void HandleIORInterrupt(void *pParam);
+
+protected:
+    void IOTask(void) override;
 
 private:
     /* Gus *gus; */                

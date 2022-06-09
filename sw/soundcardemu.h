@@ -43,10 +43,9 @@ protected:
 	static void FastGPIOClear(void);
 	static u32 FastGPIORead(void);
 
+	virtual void MainTask(void);
+	virtual void SoundTask(void); 
+	virtual void IOTask(void); 
 private:
 	CPWMSoundBaseDevice *m_sndDevice;
-
-	void MainTask(void);
-	void SoundTask(void); 
-	void IOTask(void); 
 };

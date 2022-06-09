@@ -54,8 +54,8 @@ void GusEmu::HandleIOWInterrupt(void *pParam)
     GusEmu* pThis = static_cast<GusEmu*>(pParam);
     /* pThis->m_Logger.Write("GusEmu", LogNotice, "IOW"); */
 #ifdef USE_INTERRUPTS
-    u32 gpios = CGPIOPin::ReadAll();
-    /* u32 gpios = SoundcardEmu::FastGPIORead(); */
+    /* u32 gpios = CGPIOPin::ReadAll(); */
+    u32 gpios = SoundcardEmu::FastGPIORead();
 #else
     u32 gpios = pThis->gpios;
 #endif
@@ -74,7 +74,7 @@ void GusEmu::HandleIOWInterrupt(void *pParam)
         case 0x20b:
             value = (gpios >> 4) & 0xFF;
             // let's a go
-            pThis->gus->WriteToPort(port, value, io_width_t::byte);
+            pThis->gus->WriteToPort(port + GUS_PORT_BASE, value, io_width_t::byte);
             CActLED::Get()->Blink(1);
             break;
     }
@@ -84,7 +84,7 @@ void GusEmu::HandleIOWInterrupt(void *pParam)
 void GusEmu::HandleIORInterrupt(void *pParam)
 {
     GusEmu* pThis = static_cast<GusEmu*>(pParam);
-#ifdef USE_INTERRUPTS
+#if defined USE_INTERRUPTS || defined USE_HYBRID_POLLING
     /* u32 gpios = CGPIOPin::ReadAll(); */
     u32 gpios = SoundcardEmu::FastGPIORead();
 #else
@@ -111,8 +111,8 @@ void GusEmu::HandleIORInterrupt(void *pParam)
                     pThis->m_DataPins[i]->SetMode(GPIOModeOutput);
                 }
                 */
-                //value = pThis->gus->ReadFromPort(port, io_width_t::byte);
-                value = 0x55;
+                value = pThis->gus->ReadFromPort(port + GUS_PORT_BASE, io_width_t::byte);
+                /* value = 0x55; */
                 /* CGPIOPin::WriteAll(value << 4, 0xFF0); */
                 SoundcardEmu::FastGPIOWriteData(value, TRUE);
                 /* value = 0xAA; */
@@ -121,7 +121,6 @@ void GusEmu::HandleIORInterrupt(void *pParam)
                 /* CActLED::Get()->On(); */
                 /*
                 CTimer::SimpleusDelay(1);
-                SoundcardEmu::FastGPIOClear();
                 */
             } else {
                 // rising edge - Set data pins back to inputs
@@ -133,7 +132,7 @@ void GusEmu::HandleIORInterrupt(void *pParam)
                     pThis->m_DataPins[i]->SetMode(GPIOModeInput);
                 }
                 */
-                /* SoundcardEmu::FastGPIOClear(); */
+                SoundcardEmu::FastGPIOClear();
                 /* CActLED::Get()->Off(); */
             }
             break;
@@ -141,3 +140,42 @@ void GusEmu::HandleIORInterrupt(void *pParam)
 }
 
 
+void GusEmu::IOTask(void) {
+    m_Logger.Write("GusEmu", LogNotice, "IOTask starting up (overridden)");
+
+    u8 curr_iow, last_iow = 1, curr_ior, last_ior = 1;
+#ifdef USE_INTERRUPTS
+    u32 gpios;
+#endif
+
+    for (;;) {
+	/* gpios = CGPIOPin::ReadAll(); */
+        gpios = SoundcardEmu::FastGPIORead();
+	curr_iow = gpios & 0x1;
+#ifndef USE_HYBRID_POLLING
+	curr_ior = (gpios & 0x2) >> 0x1;
+#endif
+
+        u16 port = ((gpios >> 12) & 0x3FF) - 0x40;
+        if (!(port & 0x200)) {
+            continue;
+        }
+
+	if (curr_iow < last_iow) {  // falling edge of ~IOW
+            HandleIOWInterrupt(this);
+	    /* CMultiCoreSupport::SendIPI(3, IPI_IOW); */
+	}
+#ifndef USE_HYBRID_POLLING
+	// Be careful of race conditions here -- should this be an else if?
+	if (curr_ior != last_ior) {  // rising falling edge of ~IOR
+            HandleIORInterrupt(this);
+	    /* CMultiCoreSupport::SendIPI(3, IPI_IOR); */
+	}
+#endif
+
+	last_iow = curr_iow;
+#ifndef USE_HYBRID_POLLING
+	last_ior = curr_ior;
+#endif
+    }
+}

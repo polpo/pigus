@@ -43,6 +43,8 @@ boolean SoundcardEmu::Initialize(void)
 void SoundcardEmu::MainTask(void) {
 #ifdef USE_INTERRUPTS
     m_Logger.Write("SoundcardEmu", LogNotice, "MainTask starting up (and not doing anything - using interrupts!)");
+#elif defined USE_HYBRID_POLLING
+    m_Logger.Write("SoundcardEmu", LogNotice, "MainTask starting up (and not doing anything - using interrupts and polling!)");
 #else
     m_Logger.Write("SoundcardEmu", LogNotice, "MainTask starting up (and not doing anything - using polling in IOTask!)");
 #endif
@@ -117,7 +119,7 @@ void SoundcardEmu::Run(unsigned nCore) {
         return MainTask();
     case 1:
         return SoundTask();
-#ifndef USE_INTERRUPTS
+#if !defined USE_INTERRUPTS || defined USE_HYBRID_POLLING
     case 2:
         return IOTask();
 #endif
@@ -148,7 +150,7 @@ void SoundcardEmu::IPIHandler(unsigned nCore, unsigned nIPI) {
 void SoundcardEmu::FastGPIOWriteData(u8 nValue, boolean setOutput) {
     // set pins 4-11 as output, leave rest as input
     write32(ARM_GPIO_GPCLR0, 0xFF0u);
-    write32(ARM_GPIO_GPSET0, (u32)nValue << 4);
+    write32(ARM_GPIO_GPSET0, static_cast<u32>(nValue) << 4);
     if (setOutput) {
         write32(ARM_GPIO_GPFSEL0, 0x9249000u);
         write32(ARM_GPIO_GPFSEL1, 0x49u);
@@ -157,11 +159,13 @@ void SoundcardEmu::FastGPIOWriteData(u8 nValue, boolean setOutput) {
 
 
 void SoundcardEmu::FastGPIOClear(void) {
-    // clear all pins
-    write32(ARM_GPIO_GPCLR0, 0xFFFFFFFFu);
-    // set all pins as input
+    write32(ARM_GPIO_GPSET0, 0x8000FF0u);
+    // set lowest 20 GPIO pins as input
     write32(ARM_GPIO_GPFSEL0, 0x0u);
     write32(ARM_GPIO_GPFSEL1, 0x0u);
+    // clear our data pins (except GPIO 27 - it's holding OE on the shifters high!)
+    // 0xF7FFFFFF
+    write32(ARM_GPIO_GPCLR0, 0xFF0u);
 }
 
 
