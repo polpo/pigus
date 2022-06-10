@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 #include <functional>
 #include <assert.h>
@@ -162,3 +164,8 @@ constexpr cast_t check_cast(const check_t in)
 	return static_cast<cast_t>(in);
 }
 
+/*
+ * assert
+ */
+// Include a message in assert, similar to static_assert:
+#define assertm(exp, msg) assert(((void)msg, exp))

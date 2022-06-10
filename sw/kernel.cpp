@@ -1,5 +1,5 @@
 #include "kernel.h"
-//#include <circle/timer.h>
+#include <circle/timer.h>
 #include <cstddef>
 
 #include <circle/gpiopin.h>
@@ -30,9 +30,9 @@ CKernel::CKernel(void)
     m_Manager(&m_Interrupt)
 {
 #ifdef EMULATE_ADLIB
-    m_pSoundcardEmu = new AdlibEmu(CMemorySystem::Get(), &m_Interrupt, *m_SpinLock);
+    m_pSoundcardEmu = new AdlibEmu(CMemorySystem::Get(), &m_Interrupt, m_Timer);
 #else
-    m_pSoundcardEmu = new GusEmu(CMemorySystem::Get(), &m_Interrupt, *m_SpinLock);
+    m_pSoundcardEmu = new GusEmu(CMemorySystem::Get(), &m_Interrupt, m_Timer);
 #endif
 }
 

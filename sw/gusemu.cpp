@@ -4,9 +4,9 @@
 
 #include "gusemu.h"
 
-GusEmu::GusEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CSpinLock &spinlock)
+GusEmu::GusEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CTimer &timer)
 :
-    SoundcardEmu(pMemorySystem, pInterrupt, spinlock)
+    SoundcardEmu(pMemorySystem, pInterrupt, timer)
 {
     gus = std::make_unique<Gus>(GUS_PORT, 1, 5, "", m_Logger);
     for (size_t i = 0; i < m_DataPins.size(); i++) {
@@ -32,8 +32,12 @@ boolean GusEmu::Initialize(void)
 void GusEmu::RenderSound(s16* buffer, size_t nFrames)
 {
     // enjoy the silence
-    memset(buffer, 0, nFrames * 2 * sizeof(s16));
+    /* memset(buffer, 0, nFrames * 2 * sizeof(s16)); */
 //    adlib_getsample(buffer, nFrames);
+    std::vector<int16_t> v_buffer(nFrames * 2);
+    gus->AudioCallback(nFrames, v_buffer);
+    // uuugggh copying
+    memcpy(buffer, v_buffer.data(), nFrames * 2 * sizeof(s16));
 }
 
 
@@ -122,6 +126,8 @@ void GusEmu::HandleIORInterrupt(void *pParam)
                 /*
                 CTimer::SimpleusDelay(1);
                 */
+                pThis->m_Timer.nsDelay(1500);
+                SoundcardEmu::FastGPIOClear();
             } else {
                 // rising edge - Set data pins back to inputs
                 /*
@@ -132,7 +138,7 @@ void GusEmu::HandleIORInterrupt(void *pParam)
                     pThis->m_DataPins[i]->SetMode(GPIOModeInput);
                 }
                 */
-                SoundcardEmu::FastGPIOClear();
+                /* SoundcardEmu::FastGPIOClear(); */
                 /* CActLED::Get()->Off(); */
             }
             break;

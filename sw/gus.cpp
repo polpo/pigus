@@ -309,7 +309,7 @@ void Voice::WriteWaveRate(uint16_t val) noexcept
 Gus::Gus(uint16_t port, uint8_t dma, uint8_t irq, const std::string &ultradir, CLogger &logger)
         : render_buffer(BUFFER_FRAMES * 2), // 2 samples/frame, L & R channels
           play_buffer(BUFFER_FRAMES * 2),   // 2 samples/frame, L & R channels
-          //soft_limiter("GUS"),
+          soft_limiter("GUS"),
           port_base(port - 0x200u),
 #if 0 // no DMA yet
           dma2(dma),
@@ -365,10 +365,10 @@ void Gus::ActivateVoices(uint8_t requested_voices)
 
 void Gus::SetLevelCallback(const AudioFrame &levels)
 {
-	//soft_limiter.UpdateLevels(levels, 1);
+	soft_limiter.UpdateLevels(levels, 1);
 }
 
-void Gus::AudioCallback(const uint16_t requested_frames)
+void Gus::AudioCallback(const uint16_t requested_frames, std::vector<int16_t> &play_buffer)
 {
 	uint16_t generated_frames = 0;
 	while (generated_frames < requested_frames) {
@@ -381,7 +381,7 @@ void Gus::AudioCallback(const uint16_t requested_frames)
 		const auto num_samples = frames * 2;
 		std::fill_n(render_buffer.begin(), num_samples, 0.0f);
 
-		if (dac_enabled) {
+		// if (dac_enabled) {
 			auto voice = voices.begin();
 			const auto last_voice = voice + active_voices;
 			while (voice < last_voice && *voice) {
@@ -390,9 +390,9 @@ void Gus::AudioCallback(const uint16_t requested_frames)
 				                              pan_scalars, frames);
 				++voice;
 			}
-		}
+		// }
 		// actually play the play buffer
-		//soft_limiter.Process(render_buffer, frames, play_buffer);
+		soft_limiter.Process(render_buffer, frames, play_buffer);
 		//audio_channel->AddSamples_s16(frames, play_buffer.data());
 		CheckVoiceIrq();
 		generated_frames += frames;
@@ -793,7 +793,7 @@ uint16_t Gus::ReadFromPort(const io_port_t port, io_width_t width)
 
 uint16_t Gus::ReadFromRegister()
 {
-	LOG_MSG("GUS: Read register %x", selected_register);
+	//LOG_MSG("GUS: Read register %x", selected_register);
 	uint8_t reg = 0;
 
 	// Registers that read from the general DSP
@@ -921,7 +921,7 @@ void Gus::StopPlayback()
 	// TODO do stuff w/ reenabling audio output
 	//audio_channel->Enable(false);
 
-	//soft_limiter.Reset();
+	soft_limiter.Reset();
 
 	dac_enabled = false;
 	irq_enabled = false;
@@ -987,7 +987,7 @@ void Gus::WriteToPort(io_port_t port, io_val_t value, io_width_t width)
 {
 	const auto val = check_cast<uint16_t>(value);
 
-	LOG_MSG("GUS: Write to port %x val %x", port, val);
+	/* LOG_MSG("GUS: Write to port %x val %x", port, val); */
 	switch (port - port_base) {
 	case 0x200:
 		mix_ctrl = static_cast<uint8_t>(val);

@@ -37,9 +37,9 @@
 #include "pic.h"
 #include "setup.h"
 #include "shell.h"
-#include "soft_limiter.h"
 #include "string_utils.h"
 */
+#include "soft_limiter.h"
 
 #define LOG_GUS 1 // set to 1 for detailed logging
 
@@ -52,7 +52,8 @@ constexpr uint8_t ADLIB_CMD_DEFAULT = 85u;
 #endif
 
 // Buffer and memory constants
-constexpr int BUFFER_FRAMES = 48;
+//constexpr int BUFFER_FRAMES = 48;
+constexpr int BUFFER_FRAMES = 256;
 constexpr uint32_t RAM_SIZE = 1024 * 1024;        // 1 MiB
 
 // DMA transfer size and rate constants
@@ -235,7 +236,9 @@ private:
 	Gus &operator=(const Gus &) = delete; // prevent assignment
 
 	void ActivateVoices(uint8_t requested_voices);
-	void AudioCallback(uint16_t requested_frames);
+public:
+	void AudioCallback(uint16_t requested_frames, std::vector<int16_t> &play_buffer);
+private:
 	void BeginPlayback();
 	void CheckIrq();
 	void CheckVoiceIrq();
@@ -282,7 +285,7 @@ private:
 
 	// Struct and pointer members
 	VoiceIrq voice_irq = {};
-	//SoftLimiter soft_limiter;
+	SoftLimiter soft_limiter;
 	Voice *target_voice = nullptr;
 #if 0 // no DMA yet
 	DmaChannel *dma_channel = nullptr;

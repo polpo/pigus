@@ -20,7 +20,7 @@
 class GusEmu : public SoundcardEmu
 {
 public:
-    GusEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CSpinLock &spinlock);
+    GusEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CTimer &timer);
     ~GusEmu(void);
 
     boolean Initialize(void) override;

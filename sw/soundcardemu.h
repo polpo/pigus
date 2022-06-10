@@ -20,7 +20,7 @@
 class SoundcardEmu : public CMultiCoreSupport
 {
 public:
-	SoundcardEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CSpinLock &spinlock);
+	SoundcardEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CTimer& timer);
 	~SoundcardEmu(void);
 
 	virtual boolean Initialize(void);
@@ -31,7 +31,8 @@ public:
 protected:
 	CLogger	&m_Logger;
 	CInterruptSystem* m_pInterrupt;
-	CSpinLock &m_SpinLock;
+	/* CSpinLock &m_SpinLock; */
+	CTimer &m_Timer;
 #ifndef USE_INTERRUPTS
 	u32 gpios;
 #endif

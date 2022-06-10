@@ -8,12 +8,12 @@
 
 #include "soundcardemu.h"
 
-SoundcardEmu::SoundcardEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CSpinLock &spinlock)
+SoundcardEmu::SoundcardEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CTimer &timer)
 :
     CMultiCoreSupport(pMemorySystem),
     m_Logger(*CLogger::Get()),
     m_pInterrupt(pInterrupt),
-    m_SpinLock(spinlock),
+    m_Timer(timer),
     m_sndDevice(nullptr)
 {
 }
