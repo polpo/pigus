@@ -3,6 +3,7 @@
 #include <circle/gpiopin.h>
 
 #include "gusemu.h"
+#include "gpio.h"
 
 GusEmu::GusEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CTimer &timer)
 :
@@ -59,7 +60,7 @@ void GusEmu::HandleIOWInterrupt(void *pParam)
     /* pThis->m_Logger.Write("GusEmu", LogNotice, "IOW"); */
 #ifdef USE_INTERRUPTS
     /* u32 gpios = CGPIOPin::ReadAll(); */
-    u32 gpios = SoundcardEmu::FastGPIORead();
+    u32 gpios = FastGPIO::FastGPIORead();
 #else
     u32 gpios = pThis->gpios;
 #endif
@@ -90,7 +91,7 @@ void GusEmu::HandleIORInterrupt(void *pParam)
     GusEmu* pThis = static_cast<GusEmu*>(pParam);
 #if defined USE_INTERRUPTS || defined USE_HYBRID_POLLING
     /* u32 gpios = CGPIOPin::ReadAll(); */
-    u32 gpios = SoundcardEmu::FastGPIORead();
+    u32 gpios = FastGPIO::FastGPIORead();
 #else
     u32 gpios = pThis->gpios;
 #endif
@@ -118,16 +119,16 @@ void GusEmu::HandleIORInterrupt(void *pParam)
                 value = pThis->gus->ReadFromPort(port + GUS_PORT_BASE, io_width_t::byte);
                 /* value = 0x55; */
                 /* CGPIOPin::WriteAll(value << 4, 0xFF0); */
-                SoundcardEmu::FastGPIOWriteData(value, TRUE);
+                FastGPIO::FastGPIOWriteData(value, TRUE);
                 /* value = 0xAA; */
                 /* CGPIOPin::WriteAll(value << 4, 0xFF0); */
-                /* SoundcardEmu::FastGPIOWriteData(value); */
+                /* FastGPIO::FastGPIOWriteData(value); */
                 /* CActLED::Get()->On(); */
                 /*
                 CTimer::SimpleusDelay(1);
                 */
                 pThis->m_Timer.nsDelay(1500);
-                SoundcardEmu::FastGPIOClear();
+                FastGPIO::FastGPIOClear();
             } else {
                 // rising edge - Set data pins back to inputs
                 /*
@@ -138,7 +139,7 @@ void GusEmu::HandleIORInterrupt(void *pParam)
                     pThis->m_DataPins[i]->SetMode(GPIOModeInput);
                 }
                 */
-                /* SoundcardEmu::FastGPIOClear(); */
+                /* FastGPIO::FastGPIOClear(); */
                 /* CActLED::Get()->Off(); */
             }
             break;
@@ -154,7 +155,7 @@ void GusEmu::IOTask(void) {
 
     for (;;) {
 	/* gpios = CGPIOPin::ReadAll(); */
-        gpios = SoundcardEmu::FastGPIORead();
+        gpios = FastGPIO::FastGPIORead();
 	curr_iow = gpios & 0x1;
 #ifndef USE_HYBRID_POLLING
 	curr_ior = (gpios & 0x2) >> 0x1;
