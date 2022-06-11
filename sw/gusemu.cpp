@@ -36,12 +36,13 @@ boolean GusEmu::Initialize(void)
 
 void GusEmu::RenderSound(s16* buffer, size_t nFrames)
 {
+    // TODO Workaround for noise generated directly after init – handle this better!
     if (!gus->active_voices) {
         // enjoy the silence
         memset(buffer, 0, nFrames * 2 * sizeof(s16));
         return;
     }
-//    adlib_getsample(buffer, nFrames);
+
     unsigned int in_rate, out_rate;
     speex_resampler_get_rate(m_pResampler, &in_rate, &out_rate);
     if (in_rate != gus->playback_rate) {
@@ -58,6 +59,9 @@ void GusEmu::RenderSound(s16* buffer, size_t nFrames)
 
     int err = speex_resampler_process_interleaved_int(m_pResampler, v_buffer.data(), &inSamples, buffer, &outSamples); 
     if (nFrames != outSamples) {
+        // TODO - with our sound playback routine, we need a guaranteed nFrames of data generated in this function.
+        // If sample rates are a non-even divisor of each other, speex won't generate nFrames of output samples
+        // every time
         m_Logger.Write("GusEmu", LogNotice, "requested out %d actual out %d", nFrames, outSamples);
     }
     /* // uuugggh copying */
@@ -131,6 +135,9 @@ void GusEmu::HandleIORInterrupt(void *pParam)
         case 0x307:
             value = pThis->gus->ReadFromPort(port + GUS_PORT_BASE, io_width_t::byte);
             FastGPIO::FastGPIOWriteData(value, TRUE);
+            // Simply delay ~4 ISA clock cycles worth and clear the data pins. Reacting to rising edge of IOR is not reliable enough.
+            // TODO - we can't assume this bus timing for all PCs. Perhaps calibrate this in an init utility?
+            // TODO - the requested 1500ns delay winds up being only 500ns in reality. Find out why
             pThis->m_Timer.nsDelay(1500);
             FastGPIO::FastGPIOClear();
             break;
