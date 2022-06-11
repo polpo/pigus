@@ -301,12 +301,16 @@ private:
 	// Voice states
 	uint32_t active_voice_mask = 0u;
 	uint16_t voice_index = 0u;
+public:
 	uint8_t active_voices = 0u;
+private:
 	uint8_t prev_logged_voices = 0u;
 
 	// Register and playback rate
 	uint32_t dram_addr = 0u;
+public:
 	int playback_rate = 0;
+private:
 	uint16_t register_data = 0u;
 	uint8_t selected_register = 0u;
 

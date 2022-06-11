@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include <circle/sysconfig.h>
 #include <circle/memorymap.h>
 #include <circle/gpiopin.h>
@@ -13,6 +15,8 @@ GusEmu::GusEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CTime
     for (size_t i = 0; i < m_DataPins.size(); i++) {
         m_DataPins[i] = new CGPIOPin(i, GPIOModeInput);
     }
+
+    m_pResampler = speex_resampler_init(2, 44100, 44100, 5, &m_ResamplerErr); 
 }
 
 GusEmu::~GusEmu(void) {}
@@ -32,13 +36,32 @@ boolean GusEmu::Initialize(void)
 
 void GusEmu::RenderSound(s16* buffer, size_t nFrames)
 {
-    // enjoy the silence
-    /* memset(buffer, 0, nFrames * 2 * sizeof(s16)); */
+    if (!gus->active_voices) {
+        // enjoy the silence
+        memset(buffer, 0, nFrames * 2 * sizeof(s16));
+        return;
+    }
 //    adlib_getsample(buffer, nFrames);
+    unsigned int in_rate, out_rate;
+    speex_resampler_get_rate(m_pResampler, &in_rate, &out_rate);
+    if (in_rate != gus->playback_rate) {
+        speex_resampler_set_rate(m_pResampler, gus->playback_rate, 44100);
+        m_Logger.Write("GusEmu", LogNotice, "in_rate %d", gus->playback_rate);
+    }
+
     std::vector<int16_t> v_buffer(nFrames * 2);
-    gus->AudioCallback(nFrames, v_buffer);
-    // uuugggh copying
-    memcpy(buffer, v_buffer.data(), nFrames * 2 * sizeof(s16));
+
+    size_t outSamples = nFrames;// * 2;
+    size_t inSamples = round(outSamples * (static_cast<float>(gus->playback_rate) / 44100.0));
+
+    gus->AudioCallback(inSamples, v_buffer);
+
+    int err = speex_resampler_process_interleaved_int(m_pResampler, v_buffer.data(), &inSamples, buffer, &outSamples); 
+    if (nFrames != outSamples) {
+        m_Logger.Write("GusEmu", LogNotice, "requested out %d actual out %d", nFrames, outSamples);
+    }
+    /* // uuugggh copying */
+    /* memcpy(buffer, v_buffer.data(), nFrames * 2 * sizeof(s16)); */
 }
 
 

@@ -12,6 +12,7 @@
 
 #include "soundcardemu.h"
 #include "gus.h"
+#include "vendor/speex/speex_resampler.h"
 
 
 #define GUS_PORT 0x240
@@ -37,6 +38,8 @@ private:
     /* Gus *gus; */                
     std::unique_ptr<Gus> gus = nullptr;
     std::array<CGPIOPin*, 8> m_DataPins;
+    SpeexResamplerState* m_pResampler; 
+    int m_ResamplerErr; 
 
     void RenderSound(s16* buffer, size_t nFrames) override;
 };
