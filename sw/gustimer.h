@@ -6,9 +6,6 @@
 #include <circle/timer.h>
 
 
-#define GUS_PORT 0x240
-#define GUS_PORT_BASE 0x40
-
 typedef void Gus_EventHandler(uint32_t param1, void* param2);
 
 class GusTimer
@@ -24,8 +21,6 @@ public:
 
 private:
     struct TimerEvent {
-        TimerEvent(unsigned _start, unsigned _delay, Gus_EventHandler* _handler, uint32_t _param1, void* _param2) :
-            start(_start), delay(_delay), param1(_param1), param2(_param2) {}
         unsigned start;
         unsigned delay;
         Gus_EventHandler* handler;

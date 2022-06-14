@@ -15,8 +15,8 @@
 #include "vendor/speex/speex_resampler.h"
 
 
-#define GUS_PORT 0x240
-#define GUS_PORT_BASE 0x40
+constexpr uint16_t GUS_PORT = 0x240;
+constexpr uint16_t GUS_PORT_BASE = GUS_PORT - 0x200;
 
 class GusEmu : public SoundcardEmu
 {
