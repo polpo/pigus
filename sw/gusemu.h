@@ -8,10 +8,10 @@
 #include <circle/memory.h>
 #include <circle/types.h>
 #include <circle/pwmsoundbasedevice.h>
-#include <circle/spinlock.h>
 
 #include "soundcardemu.h"
 #include "gus.h"
+#include "gustimer.h"
 #include "vendor/speex/speex_resampler.h"
 
 
@@ -30,9 +30,11 @@ public:
     TGPIOInterruptHandler* getIORInterruptHandler() override;
     static inline void HandleIOWInterrupt(void *pParam);
     static inline void HandleIORInterrupt(void *pParam);
+    static inline void RaiseIRQ(void* irq_param);
 
 protected:
     void IOTask(void) override;
+    void TimerTask(void) override;
 
 private:
     /* Gus *gus; */                
@@ -40,6 +42,7 @@ private:
     std::array<CGPIOPin*, 8> m_DataPins;
     SpeexResamplerState* m_pResampler; 
     int m_ResamplerErr; 
+    GusTimer m_GusTimer;
 
     void RenderSound(s16* buffer, size_t nFrames) override;
 };

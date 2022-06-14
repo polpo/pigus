@@ -122,7 +122,7 @@ void SoundcardEmu::Run(unsigned nCore) {
         return IOTask();
 #endif
     case 3:
-        for (;;) {}
+        return TimerTask();
     default:
         return;
     }

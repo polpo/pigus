@@ -43,6 +43,7 @@ protected:
 	virtual void MainTask(void);
 	virtual void SoundTask(void); 
 	virtual void IOTask(void); 
+	virtual void TimerTask(void) {}; 
 private:
 	CPWMSoundBaseDevice *m_sndDevice;
 };

@@ -9,7 +9,7 @@
 class FastGPIO
 {
 public:
-        static inline void FastGPIOWriteData(u8 nValue, boolean setOutput) {
+        static inline void FastGPIODataWrite(u8 nValue, boolean setOutput) {
             // set pins 4-11 as output, leave rest as input
             u32 shift_value = static_cast<u32>(nValue) << 4;
             write32(ARM_GPIO_GPCLR0, 0xFF0u & ~shift_value);
@@ -20,7 +20,7 @@ public:
             }
         }
 
-        static inline void FastGPIOClear(void) {
+        static inline void FastGPIODataClear(void) {
             // be careful of GPIO 27 - it's holding OE on the shifters high!
             // reset data pins high 
             write32(ARM_GPIO_GPSET0, 0xFF0u);
@@ -29,6 +29,21 @@ public:
             write32(ARM_GPIO_GPFSEL1, 0x0u);
             // clear values
             write32(ARM_GPIO_GPCLR0, 0xFF0u);
+        }
+
+        static inline void FastGPIOIRQSet(void) {
+            // IRQ is GPIO 22
+            // set GPIO 22 as output. also maintain GPIO 27 as output
+            write32(ARM_GPIO_GPFSEL0 + 8, 0x200040u);
+            // set 22 high
+            write32(ARM_GPIO_GPSET0, 0x400000u);
+        }
+
+        static inline void FastGPIOIRQClear(void) {
+            // set 22 back low
+            write32(ARM_GPIO_GPCLR0, 0x400000u);
+            // set 22 back to input, leaving 27 as output
+            write32(ARM_GPIO_GPFSEL0 + 8, 0x200000u);
         }
 
         static inline u32 FastGPIORead(void) {

@@ -306,16 +306,14 @@ void Voice::WriteWaveRate(uint16_t val) noexcept
 	wave_ctrl.inc = ceil_udivide(val, 2u);
 }
 
-Gus::Gus(uint16_t port, uint8_t dma, uint8_t irq, const std::string &ultradir, CLogger &logger)
+Gus::Gus(uint16_t port, IRQCallback irq_callback, void* irq_param, GusTimer& gus_timer, CLogger &logger)
         : render_buffer(BUFFER_FRAMES * 2), // 2 samples/frame, L & R channels
           play_buffer(BUFFER_FRAMES * 2),   // 2 samples/frame, L & R channels
           soft_limiter("GUS"),
           port_base(port - 0x200u),
-#if 0 // no DMA yet
-          dma2(dma),
-#endif
-          irq1(irq),
-          irq2(irq),
+          irq_callback(irq_callback),
+          irq_param(irq_param),
+	  m_GusTimer(gus_timer),
 	  m_Logger(logger)
 {
 	// Create the internal voice channels
@@ -415,9 +413,7 @@ void Gus::CheckIrq()
 	const bool should_interrupt = irq_status & (irq_enabled ? 0xff : 0x9f);
 	const bool lines_enabled = mix_ctrl & 0x08;
 	if (should_interrupt && lines_enabled)
-		;
-		// TODO handle IRQs
-		//PIC_ActivateIRQ(irq1);
+		(*irq_callback)(irq_param);
 }
 
 bool Gus::CheckTimer(const size_t t)
@@ -565,12 +561,12 @@ bool Gus::IsDmaXfer16Bit() noexcept
 static void GUS_DMA_Event(uint32_t)
 {
 	if (gus->PerformDmaTransfer())
-		PIC_AddEvent(GUS_DMA_Event, MS_PER_DMA_XFER);
+		;//PIC_AddEvent(GUS_DMA_Event, MS_PER_DMA_XFER);
 }
 
 void Gus::StartDmaTransfers()
 {
-	PIC_AddEvent(GUS_DMA_Event, MS_PER_DMA_XFER);
+	//PIC_AddEvent(GUS_DMA_Event, MS_PER_DMA_XFER);
 }
 
 void Gus::DmaCallback(DmaChannel *, DMAEvent event)
@@ -684,10 +680,8 @@ void Gus::PrepareForPlayback() noexcept
 	for (auto &voice : voices)
 		voice->ResetCtrls();
 
-#if 0 // no adlib
 	// Initialize the OPL emulator state
 	adlib_command_reg = ADLIB_CMD_DEFAULT;
-#endif
 
 	voice_irq = VoiceIrq{};
 	timer_one = Timer{TIMER_1_DEFAULT_DELAY};
@@ -767,9 +761,7 @@ uint16_t Gus::ReadFromPort(const io_port_t port, io_width_t width)
 		if (irq_status & 0x08)
 			time |= 1 << 1;
 		return time;
-#if 0 // no adlib
 	case 0x20a: return adlib_command_reg;
-#endif
 	case 0x302: return static_cast<uint8_t>(voice_index);
 	case 0x303: return selected_register;
 	case 0x304:
@@ -943,21 +935,19 @@ void Gus::StopPlayback()
 	register_data = 0u;
 	selected_register = 0u;
 	should_change_irq_dma = false;
-#if 0 // no IRQs yet
-	PIC_RemoveEvents(GUS_TimerEvent);
-#endif
+	m_GusTimer.RemoveEvents(GUS_TimerEvent);
 	is_running = false;
 }
 
-#if 0 // no IRQs yet
-static void GUS_TimerEvent(uint32_t t)
+static void GUS_TimerEvent(uint32_t t, void* pParam)
 {
+
+	Gus* gus = static_cast<Gus*>(pParam);
 	if (gus->CheckTimer(t)) {
 		const auto &timer = t == 0 ? gus->timer_one : gus->timer_two;
-		PIC_AddEvent(GUS_TimerEvent, timer.delay, t);
+		gus->m_GusTimer.AddEvent(GUS_TimerEvent, timer.delay, t, gus);
 	}
 }
-#endif
 
 #if 0 // no DMA yet
 void Gus::UpdateDmaAddress(const uint8_t new_address)
@@ -991,7 +981,6 @@ void Gus::WriteToPort(io_port_t port, io_val_t value, io_width_t width)
 		mix_ctrl = static_cast<uint8_t>(val);
 		should_change_irq_dma = true;
 		return;
-#if 0 // no adlib
 	case 0x208: adlib_command_reg = static_cast<uint8_t>(val); break;
 	case 0x209:
 		// TODO adlib_command_reg should be 4 for this to work
@@ -1005,14 +994,14 @@ void Gus::WriteToPort(io_port_t port, io_val_t value, io_width_t width)
 		timer_two.is_masked = (val & 0x20) > 0;
 		if (val & 0x1) {
 			if (!timer_one.is_counting_down) {
-				PIC_AddEvent(GUS_TimerEvent, timer_one.delay, 0);
+				m_GusTimer.AddEvent(GUS_TimerEvent, timer_one.delay, 0, this);
 				timer_one.is_counting_down = true;
 			}
 		} else
 			timer_one.is_counting_down = false;
 		if (val & 0x2) {
 			if (!timer_two.is_counting_down) {
-				PIC_AddEvent(GUS_TimerEvent, timer_two.delay, 1);
+				m_GusTimer.AddEvent(GUS_TimerEvent, timer_two.delay, 1, this);
 				timer_two.is_counting_down = true;
 			}
 		} else
@@ -1020,7 +1009,6 @@ void Gus::WriteToPort(io_port_t port, io_val_t value, io_width_t width)
 		break;
 		// TODO Check if 0x20a register is also available on the gus
 		// like on the interwave
-#endif
 #if 0 // can't handle IRQ/DMA conf
 	case 0x20b:
 		if (!should_change_irq_dma)

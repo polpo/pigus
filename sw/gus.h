@@ -41,15 +41,15 @@
 */
 #include "soft_limiter.h"
 
+#include "gustimer.h"
+
 #define LOG_GUS 1 // set to 1 for detailed logging
 
 // Global Constants
 // ----------------
 
-#if 0 // no adlib
 // AdLib emulation state constant
 constexpr uint8_t ADLIB_CMD_DEFAULT = 85u;
-#endif
 
 // Buffer and memory constants
 //constexpr int BUFFER_FRAMES = 48;
@@ -189,10 +189,12 @@ private:
 	uint8_t pan_position = PAN_DEFAULT_POSITION;
 };
 
-/* static void GUS_TimerEvent(uint32_t t); */
+static void GUS_TimerEvent(uint32_t t, void* pParam);
 /* static void GUS_DMA_Event(uint32_t val); */
 
 using voice_array_t = std::array<std::unique_ptr<Voice>, MAX_VOICES>;
+
+typedef void IRQCallback(void *pParam);
 
 // The Gravis UltraSound GF1 DSP (classic)
 // This class:
@@ -208,7 +210,7 @@ using voice_array_t = std::array<std::unique_ptr<Voice>, MAX_VOICES>;
 //
 class Gus {
 public:
-	Gus(uint16_t port, uint8_t dma, uint8_t irq, const std::string &dir, CLogger &logger);
+	Gus(uint16_t port, IRQCallback* irq_callback, void* irq_param, GusTimer &gus_timer, CLogger &logger);
 	virtual ~Gus();
 	bool CheckTimer(size_t t);
 	void PrintStats();
@@ -291,9 +293,7 @@ private:
 	DmaChannel *dma_channel = nullptr;
 #endif
 	//mixer_channel_t audio_channel = nullptr;
-#if 0 // no adlib
-	uint8_t &adlib_command_reg = adlib_commandreg;
-#endif
+	uint8_t adlib_command_reg = ADLIB_CMD_DEFAULT;
 
 	// Port address
 	io_port_t port_base = 0u;
@@ -339,12 +339,16 @@ private:
 	bool irq_enabled = false;
 	bool is_running = false;
 	bool should_change_irq_dma = false;
-	
+
+        IRQCallback* irq_callback;
+        void* irq_param;
+
+public:
+	GusTimer &m_GusTimer;
+private:
 	CLogger &m_Logger;
 };
 
 using namespace std::placeholders;
 
-#if 0 // no adlib
-uint8_t adlib_commandreg = ADLIB_CMD_DEFAULT;
-#endif
+/* uint8_t adlib_commandreg = ADLIB_CMD_DEFAULT; */

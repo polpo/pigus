@@ -1,0 +1,36 @@
+#include "gustimer.h"
+
+
+GusTimer::GusTimer() {}
+
+GusTimer::~GusTimer(void) {}
+
+
+void GusTimer::AddEvent(Gus_EventHandler* eventHandler, double delay, uint32_t param1, void* param2) {
+    unsigned delayTicks = delay * 1000 * 1000000U / CLOCKHZ;
+    m_TimerEvents.emplace_back(CTimer::GetClockTicks(), delayTicks, eventHandler, param1, param2); 
+}
+
+void GusTimer::RemoveEvents(Gus_EventHandler* eventHandler) {
+    m_TimerEvents.remove_if([eventHandler](TimerEvent& event) { return event.handler == eventHandler; });
+}
+
+void GusTimer::TimerTask(void) {
+    unsigned nTicks;
+
+    for (;;) {
+        nTicks = CTimer::GetClockTicks();
+
+        auto event = m_TimerEvents.begin();
+        auto end = m_TimerEvents.end();
+
+        while (event != end) {
+            if (nTicks - event->start >= event->delay) {
+                (*event->handler)(event->param1, event->param2);
+                event = m_TimerEvents.erase(event);
+            } else {
+                ++event;
+            }
+        }
+    }
+}

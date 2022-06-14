@@ -11,7 +11,7 @@ GusEmu::GusEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CTime
 :
     SoundcardEmu(pMemorySystem, pInterrupt, timer)
 {
-    gus = std::make_unique<Gus>(GUS_PORT, 1, 5, "", m_Logger);
+    gus = std::make_unique<Gus>(GUS_PORT, *GusEmu::RaiseIRQ, this, m_GusTimer, m_Logger);
     for (size_t i = 0; i < m_DataPins.size(); i++) {
         m_DataPins[i] = new CGPIOPin(i, GPIOModeInput);
     }
@@ -29,7 +29,7 @@ boolean GusEmu::Initialize(void)
     if (!SoundcardEmu::Initialize()) {
         return FALSE;
     }
-
+    
     return TRUE;
 }
 
@@ -134,12 +134,12 @@ void GusEmu::HandleIORInterrupt(void *pParam)
         case 0x305:
         case 0x307:
             value = pThis->gus->ReadFromPort(port + GUS_PORT_BASE, io_width_t::byte);
-            FastGPIO::FastGPIOWriteData(value, TRUE);
+            FastGPIO::FastGPIODataWrite(value, TRUE);
             // Simply delay ~4 ISA clock cycles worth and clear the data pins. Reacting to rising edge of IOR is not reliable enough.
             // TODO - we can't assume this bus timing for all PCs. Perhaps calibrate this in an init utility?
             // TODO - the requested 1500ns delay winds up being only 500ns in reality. Find out why
             pThis->m_Timer.nsDelay(1500);
-            FastGPIO::FastGPIOClear();
+            FastGPIO::FastGPIODataClear();
             break;
     }
 }
@@ -183,3 +183,17 @@ void GusEmu::IOTask(void) {
     }
 }
 #endif
+
+
+void GusEmu::TimerTask(void) {
+    m_Logger.Write("GusEmu", LogNotice, "TimerTask starting up (overridden)");
+    return m_GusTimer.TimerTask();
+}
+
+
+void GusEmu::RaiseIRQ(void* irq_param) {
+    GusEmu* pThis = static_cast<GusEmu*>(irq_param);
+    FastGPIO::FastGPIOIRQSet();
+    pThis->m_Timer.nsDelay(500);
+    FastGPIO::FastGPIOIRQClear();
+}
