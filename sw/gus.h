@@ -319,7 +319,6 @@ private:
 	uint8_t sample_ctrl = 0u;
 	uint8_t timer_ctrl = 0u;
 
-#if 0 // no DMA yet
 	// DMA states
 	uint16_t dma_addr = 0u;
 	uint8_t dma_addr_nibble = 0u;
@@ -328,7 +327,6 @@ private:
 	uint16_t dma_ctrl = 0u;
 	uint8_t dma1 = 0u; // playback DMA
 	uint8_t dma2 = 0u; // recording DMA
-#endif
 
 	// IRQ states
 	uint8_t irq1 = 0u; // playback IRQ

@@ -80,10 +80,13 @@ TShutdownMode CKernel::Run(void)
     CGPIOPin ior_pin(1, GPIOModeInput);
 #endif
     for (unsigned i=2; i < 32; ++i) {
-        CGPIOPin pin(i, i == 27 ? GPIOModeOutput : GPIOModeInput);
+        CGPIOPin pin(i, (i == 27 || i == 22) ? GPIOModeOutput : GPIOModeInput);
         if (i == 27) {
             // Enable level shifters
             pin.Write(1);
+        }
+        if (i == 22) {
+            pin.Write(0);
         }
     }
 

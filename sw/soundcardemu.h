@@ -14,6 +14,7 @@
 
 #define IPI_IOW 10
 #define IPI_IOR 11
+#define IPI_IRQOFF 12
 
 #define SNDBUFSIZ 256
 

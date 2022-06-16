@@ -9,7 +9,8 @@
 
 GusEmu::GusEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CTimer &timer)
 :
-    SoundcardEmu(pMemorySystem, pInterrupt, timer)
+    SoundcardEmu(pMemorySystem, pInterrupt, timer),
+    m_GusTimer(m_Logger)
 {
     gus = std::make_unique<Gus>(GUS_PORT, *GusEmu::RaiseIRQ, this, m_GusTimer, m_Logger);
     for (size_t i = 0; i < m_DataPins.size(); i++) {
@@ -192,8 +193,9 @@ void GusEmu::TimerTask(void) {
 
 
 void GusEmu::RaiseIRQ(void* irq_param) {
-    GusEmu* pThis = static_cast<GusEmu*>(irq_param);
+    /* GusEmu* pThis = static_cast<GusEmu*>(irq_param); */
     FastGPIO::FastGPIOIRQSet();
-    pThis->m_Timer.nsDelay(500);
-    FastGPIO::FastGPIOIRQClear();
+    // Let core 0 be responsible for setting it back low
+    /* CMultiCoreSupport::SendIPI(0, IPI_IRQOFF); */
+    /* pThis->m_Logger.Write("GusEmu", LogNotice, "IRQ fired"); */
 }

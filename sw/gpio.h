@@ -34,7 +34,9 @@ public:
         static inline void FastGPIOIRQSet(void) {
             // IRQ is GPIO 22
             // set GPIO 22 as output. also maintain GPIO 27 as output
-            write32(ARM_GPIO_GPFSEL0 + 8, 0x200040u);
+            // clear it in case we still haven't cleared the last IRQ - we want it to hit
+            write32(ARM_GPIO_GPCLR0, 0x400000u);
+            //write32(ARM_GPIO_GPFSEL0 + 8, 0x200040u);
             // set 22 high
             write32(ARM_GPIO_GPSET0, 0x400000u);
         }
@@ -43,7 +45,7 @@ public:
             // set 22 back low
             write32(ARM_GPIO_GPCLR0, 0x400000u);
             // set 22 back to input, leaving 27 as output
-            write32(ARM_GPIO_GPFSEL0 + 8, 0x200000u);
+            //write32(ARM_GPIO_GPFSEL0 + 8, 0x200000u);
         }
 
         static inline u32 FastGPIORead(void) {

@@ -4,6 +4,7 @@
 #include <circle/gpiopin.h>
 #include <circle/gpiopinfiq.h>
 
+#include "gpio.h"
 #include "soundcardemu.h"
 
 SoundcardEmu::SoundcardEmu(CMemorySystem* pMemorySystem, CInterruptSystem* pInterrupt, CTimer &timer)
@@ -129,16 +130,22 @@ void SoundcardEmu::Run(unsigned nCore) {
 }
 
 void SoundcardEmu::IPIHandler(unsigned nCore, unsigned nIPI) {
-    if (nCore != 3 || nIPI < IPI_USER) {
+    if (nCore != 0 || nIPI < IPI_USER) {
 	return CMultiCoreSupport::IPIHandler(nCore, nIPI);
     }
     switch (nIPI) {
+    case IPI_IRQOFF:
+        m_Timer.nsDelay(500);
+        FastGPIO::FastGPIOIRQClear();
+        break;
+    /*
     case IPI_IOW:
 	getIOWInterruptHandler()(this);
 	break;
     case IPI_IOR:
 	getIORInterruptHandler()(this);
 	break;
+    */
     default:
         m_Logger.Write("SoundcardEmu", LogPanic, "Received unhandled IPI %d", nIPI);
     }

@@ -397,12 +397,15 @@ void Gus::AudioCallback(const uint16_t requested_frames, std::vector<int16_t> &p
 
 void Gus::BeginPlayback()
 {
+        /* LOG_MSG("GUS: BeginPlayback %d", active_voices); */
 	dac_enabled = ((register_data & 0x200) != 0);
 	irq_enabled = ((register_data & 0x400) != 0);
 	//audio_channel->Enable(true);
 	if (prev_logged_voices != active_voices) {
+            /*
 		LOG_MSG("GUS: Activated %u voices at %d Hz", active_voices,
 		        playback_rate);
+                */
 		prev_logged_voices = active_voices;
 	}
 	is_running = true;
@@ -410,8 +413,9 @@ void Gus::BeginPlayback()
 
 void Gus::CheckIrq()
 {
-	const bool should_interrupt = irq_status & (irq_enabled ? 0xff : 0x9f);
+	const bool should_interrupt = irq_status /*& (irq_enabled ? 0xff : 0x9f)*/;
 	const bool lines_enabled = mix_ctrl & 0x08;
+        /* LOG_MSG("GUS: checkirq %d %d", should_interrupt, lines_enabled); */
 	if (should_interrupt && lines_enabled)
 		(*irq_callback)(irq_param);
 }
@@ -788,7 +792,6 @@ uint16_t Gus::ReadFromRegister()
 
 	// Registers that read from the general DSP
 	switch (selected_register) {
-#if 0 // no DMA yet
 	case 0x41: // DMA control register - read acknowledges DMA IRQ
 		reg = dma_ctrl & 0xbf;
 		// get the status and store it in bit 6 of the register
@@ -799,16 +802,13 @@ uint16_t Gus::ReadFromRegister()
 		return static_cast<uint16_t>(reg << 8);
 	case 0x42: // DMA address register
 		return dma_addr;
-#endif
 	case 0x45: // Timer control register matches Adlib's behavior
 		return static_cast<uint16_t>(timer_ctrl << 8);
-#if 0 // no DMA yet
 	case 0x49: // DMA sample register
 		reg = dma_ctrl & 0xbf;
 		// get the status and store it in bit 6 of the register
 		reg |= (dma_ctrl & DMA_TC_STATUS_BITMASK) >> 2;
 		return static_cast<uint16_t>(reg << 8);
-#endif
 	case 0x4c: // Reset register
 		reg = is_running ? 1 : 0;
 		if (dac_enabled)
@@ -978,11 +978,15 @@ void Gus::WriteToPort(io_port_t port, io_val_t value, io_width_t width)
 	/* LOG_MSG("GUS: Write to port %x val %x", port, val); */
 	switch (port - port_base) {
 	case 0x200:
+                /* LOG_MSG("GUS: 0x200 %d", val); */
 		mix_ctrl = static_cast<uint8_t>(val);
 		should_change_irq_dma = true;
 		return;
-	case 0x208: adlib_command_reg = static_cast<uint8_t>(val); break;
+	case 0x208:
+                /* LOG_MSG("GUS: 0x208 %d", val); */
+                adlib_command_reg = static_cast<uint8_t>(val); break;
 	case 0x209:
+                /* LOG_MSG("GUS: 0x209 %d", val); */
 		// TODO adlib_command_reg should be 4 for this to work
 		// else it should just latch the value
 		if (val & 0x80) {
@@ -1009,12 +1013,12 @@ void Gus::WriteToPort(io_port_t port, io_val_t value, io_width_t width)
 		break;
 		// TODO Check if 0x20a register is also available on the gus
 		// like on the interwave
-#if 0 // can't handle IRQ/DMA conf
 	case 0x20b:
 		if (!should_change_irq_dma)
 			break;
 		should_change_irq_dma = false;
 		if (mix_ctrl & 0x40) {
+                    /*
 			// IRQ configuration, only use low bits for irq 1
 			const auto i = val & 7u;
 			const auto &address = irq_addresses.at(i);
@@ -1023,15 +1027,17 @@ void Gus::WriteToPort(io_port_t port, io_val_t value, io_width_t width)
 #if LOG_GUS
 			LOG_MSG("GUS: Assigned IRQ1 to %d", irq1);
 #endif
+*/
 		} else {
+                    /*
 			// DMA configuration, only use low bits for dma 1
 			const uint8_t i = val & 0x7;
 			const auto address = dma_addresses.at(i);
 			if (address)
 				UpdateDmaAddress(address);
+                                */
 		}
 		break;
-#endif
 	case 0x302:
 		voice_index = val & 31;
 		target_voice = voices.at(voice_index).get();
@@ -1092,20 +1098,18 @@ void Gus::WriteToRegister()
 		return;
 	case 0x10: // Undocumented register used in Fast Tracker 2
 		return;
-#if 0 // no DMA yet
 	case 0x41: // DMA control register
 		// Clear all bits except the status and then replace dma_ctrl's
 		// lower bits with reg's top 8 bits
 		dma_ctrl &= DMA_TC_STATUS_BITMASK;
 		dma_ctrl |= register_data >> 8;
 		if (dma_ctrl & 1)
-			StartDmaTransfers();
+			;//StartDmaTransfers();
 		return;
 	case 0x42: // Gravis DRAM DMA address register
 		dma_addr = register_data;
 		dma_addr_nibble = 0u; // invalidate the nibble
 		return;
-#endif
 	case 0x43: // LSW Peek/poke DRAM position
 		dram_addr = (0xf0000 & dram_addr) |
 		            (static_cast<uint32_t>(register_data));
@@ -1131,13 +1135,11 @@ void Gus::WriteToRegister()
 		timer_two.value = static_cast<uint8_t>(register_data >> 8);
 		timer_two.delay = (0x100 - timer_two.value) * TIMER_2_DEFAULT_DELAY;
 		return;
-#if 0 // no DMA yet
 	case 0x49: // DMA sampling control register
 		sample_ctrl = static_cast<uint8_t>(register_data >> 8);
 		if (sample_ctrl & 1)
-			StartDmaTransfers();
+			;//StartDmaTransfers();
 		return;
-#endif
 	case 0x4c: // Runtime control
 		{
 			const auto state = (register_data >> 8) & 7;
