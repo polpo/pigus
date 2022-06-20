@@ -142,6 +142,10 @@ void GusEmu::HandleIORInterrupt(void *pParam)
             pThis->m_Timer.nsDelay(1500);
             FastGPIO::FastGPIODataClear();
             break;
+        case 0x202:
+            FastGPIO::FastGPIODataWrite(0xDD, TRUE);
+            pThis->m_Timer.nsDelay(1500);
+            FastGPIO::FastGPIODataClear();
     }
 }
 
@@ -192,9 +196,14 @@ void GusEmu::TimerTask(void) {
 }
 
 
-void GusEmu::RaiseIRQ(void* irq_param) {
+void GusEmu::RaiseIRQ(boolean raise, void* irq_param) {
     /* GusEmu* pThis = static_cast<GusEmu*>(irq_param); */
-    FastGPIO::FastGPIOIRQSet();
+    if (raise) {
+        FastGPIO::FastGPIOIRQSet();
+    } else {
+        /* FastGPIO::FastGPIOIRQClear(); */
+        CMultiCoreSupport::SendIPI(0, IPI_IRQOFF);
+    }
     // Let core 0 be responsible for setting it back low
     /* CMultiCoreSupport::SendIPI(0, IPI_IRQOFF); */
     /* pThis->m_Logger.Write("GusEmu", LogNotice, "IRQ fired"); */

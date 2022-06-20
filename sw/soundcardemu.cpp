@@ -135,7 +135,7 @@ void SoundcardEmu::IPIHandler(unsigned nCore, unsigned nIPI) {
     }
     switch (nIPI) {
     case IPI_IRQOFF:
-        m_Timer.nsDelay(500);
+        /* m_Timer.nsDelay(7200); */
         FastGPIO::FastGPIOIRQClear();
         break;
     /*

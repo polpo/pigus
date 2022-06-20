@@ -30,7 +30,7 @@ public:
     TGPIOInterruptHandler* getIORInterruptHandler() override;
     static inline void HandleIOWInterrupt(void *pParam);
     static inline void HandleIORInterrupt(void *pParam);
-    static inline void RaiseIRQ(void* irq_param);
+    static inline void RaiseIRQ(boolean raise, void* irq_param);
 
 protected:
     void IOTask(void) override;

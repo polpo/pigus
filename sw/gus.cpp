@@ -377,7 +377,7 @@ void Gus::AudioCallback(const uint16_t requested_frames, std::vector<int16_t> &p
 		const auto num_samples = frames * 2;
 		std::fill_n(render_buffer.begin(), num_samples, 0.0f);
 
-		// if (dac_enabled) {
+		if (dac_enabled) {
 			auto voice = voices.begin();
 			const auto last_voice = voice + active_voices;
 			while (voice < last_voice && *voice) {
@@ -386,7 +386,7 @@ void Gus::AudioCallback(const uint16_t requested_frames, std::vector<int16_t> &p
 				                              pan_scalars, frames);
 				++voice;
 			}
-		// }
+		}
 		// actually play the play buffer
 		soft_limiter.Process(render_buffer, frames, play_buffer);
 		//audio_channel->AddSamples_s16(frames, play_buffer.data());
@@ -413,14 +413,20 @@ void Gus::BeginPlayback()
 
 void Gus::CheckIrq()
 {
-	const bool should_interrupt = irq_status /*& (irq_enabled ? 0xff : 0x9f)*/;
+	const bool should_interrupt = irq_status & (irq_enabled ? 0xff : 0x9f);
 	const bool lines_enabled = mix_ctrl & 0x08;
-        /* LOG_MSG("GUS: checkirq %d %d", should_interrupt, lines_enabled); */
-	if (should_interrupt && lines_enabled)
-		(*irq_callback)(irq_param);
+        /* LOG_MSG("GUS: checkirq %x %x", should_interrupt, lines_enabled); */
+	if (should_interrupt && lines_enabled) {
+            /* if (prev_interrupt == 0) { */
+                (*irq_callback)(TRUE, irq_param);
+            /* } */
+        } else if (prev_interrupt) {
+            (*irq_callback)(FALSE, irq_param);
+        }
+        prev_interrupt = should_interrupt;
 }
 
-bool Gus::CheckTimer(const size_t t)
+inline bool Gus::CheckTimer(const size_t t)
 {
 	auto &timer = t == 0 ? timer_one : timer_two;
 	if (!timer.is_masked)
@@ -1126,6 +1132,9 @@ void Gus::WriteToRegister()
 		timer_two.should_raise_irq = (timer_ctrl & 0x08) > 0;
 		if (!timer_two.should_raise_irq)
 			irq_status &= ~0x08;
+                if (!timer_one.should_raise_irq && !timer_two.should_raise_irq) {
+                    CheckIrq();
+                }
 		return;
 	case 0x46: // Timer 1 control
 		timer_one.value = static_cast<uint8_t>(register_data >> 8);

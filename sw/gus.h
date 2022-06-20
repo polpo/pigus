@@ -194,7 +194,7 @@ static void GUS_TimerEvent(uint32_t t, void* pParam);
 
 using voice_array_t = std::array<std::unique_ptr<Voice>, MAX_VOICES>;
 
-typedef void IRQCallback(void *pParam);
+typedef void IRQCallback(bool raise, void *pParam);
 
 // The Gravis UltraSound GF1 DSP (classic)
 // This class:
@@ -332,6 +332,7 @@ private:
 	uint8_t irq1 = 0u; // playback IRQ
 	uint8_t irq2 = 0u; // MIDI IRQ
 	uint8_t irq_status = 0u;
+	uint8_t prev_interrupt = 0u;
 
 	bool dac_enabled = false;
 	bool irq_enabled = false;
