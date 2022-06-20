@@ -5,3 +5,5 @@ kernel*.img
 kernel*.elf
 kernel*.lst
 kernel*.map
+*.EXE
+*.OBJ
