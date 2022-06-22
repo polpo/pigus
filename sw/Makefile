@@ -3,7 +3,7 @@ include vendor/circle-stdlib/Config.mk
 CIRCLEHOME = vendor/circle-stdlib/libs/circle
 NEWLIBDIR = vendor/circle-stdlib/install/$(NEWLIB_ARCH)
 
-OBJS	= main.o kernel.o soundcardemu.o gusemu.o gustimer.o gus.o soft_limiter.o vendor/speex/resample.o
+OBJS	= main.o kernel.o soundcardemu.o gusemu.o gustimer.o gus.o soft_limiter.o # vendor/speex/resample.o
 
 OPTIMIZE = -O3
 
@@ -14,7 +14,7 @@ include $(CIRCLEHOME)/Rules.mk
 # CFLAGS += -DUSE_INTERRUPTS
 # CFLAGS += -DUSE_HYBRID_POLLING
 # CFLAGS += -DUSE_BUFFERED_SCREEN
-CFLAGS += -D_USE_NEON -DOUTSIDE_SPEEX -DRANDOM_PREFIX=PIGUS -DFLOATING_POINT -DEXPORT=/**/
+# CFLAGS += -D_USE_NEON -DOUTSIDE_SPEEX -DRANDOM_PREFIX=PIGUS -DFLOATING_POINT -DEXPORT=/**/
 
 CFLAGS += -I "$(NEWLIBDIR)/include" -I $(STDDEF_INCPATH) -I vendor/circle-stdlib/include
 LIBS := $(NEWLIBDIR)/lib/libm.a \

@@ -288,22 +288,35 @@ void Voice::WritePanPot(uint8_t pos) noexcept
 // volume scalar value (a floating point fraction between 0.0 and 1.0) is never
 // actually operated on, and is simply looked up from the final index position
 // at the time of sample population.
-void Voice::WriteVolRate(uint16_t val) noexcept
+void Voice::WriteVolRate(uint16_t val, int playback_rate) noexcept
 {
 	vol_ctrl.rate = val;
 	constexpr uint8_t bank_lengths = 63u;
 	const int pos_in_bank = val & bank_lengths;
 	const int decimator = 1 << (3 * (val >> 6));
+        /*
 	vol_ctrl.inc = ceil_sdivide(pos_in_bank * VOLUME_INC_SCALAR, decimator);
+        */
+        double frameadd = (double)pos_in_bank/decimator;
+        double realadd = (frameadd*(double)playback_rate/44100.0) * (double)WAVE_WIDTH;
+        vol_ctrl.inc = (uint32_t)realadd;
+        /*
+	vol_ctrl.inc = ceil_sdivide(pos_in_bank * VOLUME_INC_SCALAR * (double)playback_rate/44100.0), decimator);
+        */
 
 	// Sanity check the bounds of the incrementer
 	assert(vol_ctrl.inc >= 0 && vol_ctrl.inc <= bank_lengths * VOLUME_INC_SCALAR);
 }
 
-void Voice::WriteWaveRate(uint16_t val) noexcept
+void Voice::WriteWaveRate(uint16_t val, int playback_rate) noexcept
 {
 	wave_ctrl.rate = val;
+    /*
 	wave_ctrl.inc = ceil_udivide(val, 2u);
+    */
+        double frameadd = double(val >> 1)/512.0;		//Samples / original gus frame
+        double realadd = (frameadd*(double)playback_rate/44100.0) * (double)WAVE_WIDTH;
+        wave_ctrl.inc = (uint32_t)realadd;
 }
 
 Gus::Gus(uint16_t port, IRQCallback irq_callback, void* irq_param, GusTimer& gus_timer, CLogger &logger)
@@ -1178,7 +1191,7 @@ void Gus::WriteToRegister()
 			CheckVoiceIrq();
 		break;
 	case 0x1: // Voice rate control register
-		target_voice->WriteWaveRate(register_data);
+		target_voice->WriteWaveRate(register_data, playback_rate);
 		break;
 	case 0x2: // Voice MSW start address register
 		UpdateWaveMsw(target_voice->wave_ctrl.start);
@@ -1193,7 +1206,7 @@ void Gus::WriteToRegister()
 		UpdateWaveLsw(target_voice->wave_ctrl.end);
 		break;
 	case 0x6: // Voice volume rate register
-		target_voice->WriteVolRate(register_data >> 8);
+		target_voice->WriteVolRate(register_data >> 8, playback_rate);
 		break;
 	case 0x7: // Voice volume start register  EEEEMMMM
 		data = register_data >> 8;

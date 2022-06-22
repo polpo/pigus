@@ -43,7 +43,7 @@
 
 #include "gustimer.h"
 
-#define LOG_GUS 1 // set to 1 for detailed logging
+#define LOG_GUS 0 // set to 1 for detailed logging
 
 // Global Constants
 // ----------------
@@ -145,8 +145,8 @@ public:
 	uint8_t ReadWaveState() const noexcept;
 	void ResetCtrls() noexcept;
 	void WritePanPot(uint8_t pos) noexcept;
-	void WriteVolRate(uint16_t rate) noexcept;
-	void WriteWaveRate(uint16_t rate) noexcept;
+	void WriteVolRate(uint16_t rate, int playback_rate) noexcept;
+	void WriteWaveRate(uint16_t rate, int playback_rate) noexcept;
 	bool UpdateVolState(uint8_t state) noexcept;
 	bool UpdateWaveState(uint8_t state) noexcept;
 
