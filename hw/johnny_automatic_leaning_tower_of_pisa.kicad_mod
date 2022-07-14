@@ -1,0 +1,8 @@
+(module "johnny_automatic_leaning_tower_of_pisa" (layer F.Cu)
+(fp_text reference Ref** (at 0 0) (layer F.SilkS) hide
+(effects (font (size 1.27 1.27) (thickness 0.15)))
+)
+(fp_text value Val** (at 0 0) (layer F.SilkS) hide
+(effects (font (size 1.27 1.27) (thickness 0.15)))
+)
+)
