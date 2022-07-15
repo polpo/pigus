@@ -814,6 +814,7 @@ uint16_t Gus::ReadFromRegister()
 	// Registers that read from the general DSP
 	switch (selected_register) {
 	case 0x41: // DMA control register - read acknowledges DMA IRQ
+		LOG_MSG("GUS: DMA read at register %#x", selected_register);
 		reg = dma_ctrl & 0xbf;
 		// get the status and store it in bit 6 of the register
 		reg |= (dma_ctrl & DMA_TC_STATUS_BITMASK) >> 2;
@@ -822,10 +823,12 @@ uint16_t Gus::ReadFromRegister()
 		CheckIrq();
 		return static_cast<uint16_t>(reg << 8);
 	case 0x42: // DMA address register
+		LOG_MSG("GUS: DMA read at register %#x", selected_register);
 		return dma_addr;
 	case 0x45: // Timer control register matches Adlib's behavior
 		return static_cast<uint16_t>(timer_ctrl << 8);
 	case 0x49: // DMA sample register
+		LOG_MSG("GUS: DMA read at register %#x", selected_register);
 		reg = dma_ctrl & 0xbf;
 		// get the status and store it in bit 6 of the register
 		reg |= (dma_ctrl & DMA_TC_STATUS_BITMASK) >> 2;
@@ -1120,6 +1123,7 @@ void Gus::WriteToRegister()
 	case 0x10: // Undocumented register used in Fast Tracker 2
 		return;
 	case 0x41: // DMA control register
+		LOG_MSG("GUS: DMA write at register %#x", selected_register);
 		// Clear all bits except the status and then replace dma_ctrl's
 		// lower bits with reg's top 8 bits
 		dma_ctrl &= DMA_TC_STATUS_BITMASK;
@@ -1128,6 +1132,7 @@ void Gus::WriteToRegister()
 			;//StartDmaTransfers();
 		return;
 	case 0x42: // Gravis DRAM DMA address register
+		LOG_MSG("GUS: DMA write at register %#x", selected_register);
 		dma_addr = register_data;
 		dma_addr_nibble = 0u; // invalidate the nibble
 		return;
