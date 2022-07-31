@@ -7,3 +7,4 @@ kernel*.lst
 kernel*.map
 *.EXE
 *.OBJ
+build
