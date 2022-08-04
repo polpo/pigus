@@ -500,7 +500,7 @@
     (property "Sheetname" "")
     (path "/7320db56-5ec0-4bb2-b9b7-1cabf8a75396")
     (attr smd)
-    (fp_text reference "U8" (at -1.5875 -3.4 90) (layer "F.SilkS")
+    (fp_text reference "U8" (at 4.77 -2.1 90) (layer "F.SilkS")
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp c9d430aa-5fd5-4e09-9f1f-88a8143c00b5)
     )

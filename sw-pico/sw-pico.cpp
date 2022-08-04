@@ -1,17 +1,27 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
-#include "hardware/spi.h"
 #include "hardware/pio.h"
 #include "hardware/irq.h"
 
-#include "stdio_async_uart.h"
+// #include "stdio_async_uart.h"
+/*
 #define UART_TX_PIN (0)
 #define UART_RX_PIN (1)
 #define UART_ID     uart0
+*/
+/*
+#define UART_TX_PIN (28)
+#define UART_RX_PIN (29)
+#define UART_ID     uart0
 #define BAUD_RATE   115200
+*/
 
-#include "psram.h"
+#include "clock_pll.h"
+// #include "psram_pioversion.h"
+// #include "psram.h"
+// #include "psram_qspi_pio.h"
+#include "psram_spi_pio.h"
 #include "io.pio.h"
 
 #ifdef SOUND_OPL
@@ -132,8 +142,10 @@ void isr(void) {
 int main()
 {
     // Overclock!
-    /* set_sys_clock_khz(266000, true); */
-    set_sys_clock_khz(270000, true);
+    // set_sys_clock_khz(200000, true);
+    // Use hacked set_sys_clock_khz to keep SPI clock high - see clock_pll.h for details
+    // gset_sys_clock_khz(266000, true);
+    set_sys_clock_khz(280000, true);
 
     /*
     // Init GPIOs
@@ -143,43 +155,62 @@ int main()
         gpio_set_pulls(i, false, false);
     }
     */
-    /* stdio_init_all(); */
-    stdio_async_uart_init_full(UART_ID, BAUD_RATE, UART_TX_PIN, UART_RX_PIN);
+    stdio_init_all();
+    // stdio_async_uart_init_full(UART_ID, BAUD_RATE, UART_TX_PIN, UART_RX_PIN);
 
-    puts("PiGUS-nano booting!");
+    puts("PicoGUS booting!");
 
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
+
 #ifdef PSRAM
     puts("Initing PSRAM...");
-    Psram::init();
-    puts("Testing PSRAM...");
-    for (uint32_t addr = 0; addr < 1024 * 1024; ++addr) {
-        Psram::write8(addr, addr & 0xFF);
+    Psram::init(1000*1000*100);
+    puts("Writing PSRAM...");
+    uint8_t deadbeef[8] = {0xd, 0xe, 0xa, 0xd, 0xb, 0xe, 0xe, 0xf};
+    for (uint32_t addr = 0; addr < (1024 * 1024); ++addr) {
+        Psram::write8(addr, (addr & 0xFF));
+        // printf(".");
+        // Psram::write8(addr, 0xf0 | deadbeef[addr % 8]);
+        // Psram::write8(addr, 0xaa);
         /*
         if (addr % 1024 == 0) {
             //printf("w%x ", addr);
         }
         */
     }
+    puts("Reading PSRAM...");
+    Psram::set_baudrate(1000*1000*24);
+    uint8_t psram_fail = 0;
     uint32_t psram_begin = time_us_32();
-    for (uint32_t addr = 0; addr < 1024 * 1024; ++addr) {
+    for (uint32_t addr = 0; addr < (1024 * 1024); ++addr) {
         uint8_t result = Psram::read8(addr);
+        // uint16_t result16 = Psram::read16(addr);
+        // printf("%x ", result16);
+        // uint8_t result = (result16 >> 9) & 0xff;
         /* //printf("%x ", result); */
+        if (static_cast<uint8_t>((addr & 0xFF)) != result) {
+            printf("\nPSRAM failure at address %x (%x != %x)\n", addr, addr & 0xFF, result);
+            // return 1;
+            gpio_xor_mask(1u << LED_PIN);
+            if (++psram_fail > 20) {
+                for(;;) {}
+            }
+        }
         /*
-        if (static_cast<uint8_t>(addr & 0xFF) != result) {
-            //printf("PSRAM failure at address %x (%x != %x) ", addr, addr & 0xFF, result);
+        if (addr >= 20) {
             return 1;
         }
         */
     }
     uint32_t psram_elapsed = time_us_32() - psram_begin;
     float psram_speed = 1000000.0 * 1024.0 * 1024 / psram_elapsed;
-    //printf("8 bit: PSRAM read 1MB in %d us, %d bytes/sec (target 705600 bytes/sec)\n", psram_elapsed, (uint32_t)psram_speed);
+    printf("8 bit: PSRAM read 1MB in %d us, %d B/s (target 705600 B/s)\n", psram_elapsed, (uint32_t)psram_speed);
+
 
     psram_begin = time_us_32();
-    for (uint32_t addr = 0; addr < 1024 * 1024; addr += 2) {
+    for (uint32_t addr = 0; addr < (1024 * 1024); addr += 2) {
         uint16_t result = Psram::read16(addr);
         /*
         if (static_cast<uint8_t>(addr & 0xFF) != (uint8_t)(result & 0xFF)) {
@@ -190,10 +221,10 @@ int main()
     }
     psram_elapsed = (time_us_32() - psram_begin);
     psram_speed = 1000000.0 * 1024 * 1024 / psram_elapsed;
-    //printf("16 bit: PSRAM read 1MB in %d us, %d bytes/sec (target 1411200 bytes/sec)\n", psram_elapsed, (uint32_t)psram_speed);
+    printf("16 bit: PSRAM read 1MB in %d us, %d B/s (target 1411200 B/s)\n", psram_elapsed, (uint32_t)psram_speed);
 
     psram_begin = time_us_32();
-    for (uint32_t addr = 0; addr < 1024 * 1024; addr += 4) {
+    for (uint32_t addr = 0; addr < (1024 * 1024); addr += 4) {
         uint32_t result = Psram::read32(addr);
         /*
         if (static_cast<uint8_t>(addr & 0xFF) != (uint8_t)(result & 0xFF)) {
@@ -204,7 +235,8 @@ int main()
     }
     psram_elapsed = (time_us_32() - psram_begin);
     psram_speed = 1000000.0 * 1024 * 1024 / psram_elapsed;
-    //printf("32 bit: PSRAM read 1MB in %d us, %d bytes/sec (target 1411200 bytes/sec)\n", psram_elapsed, (uint32_t)psram_speed);
+    printf("32 bit: PSRAM read 1MB in %d us, %d B/s (target 1411200 B/s)\n", psram_elapsed, (uint32_t)psram_speed);
+    for(;;) {}
 #endif
 
     puts("Starting PIO...");
@@ -258,10 +290,12 @@ int main()
     gpio_set_dir(IOCHRDY_PIN, GPIO_OUT);
     /* gpio_put(IOCHRDY_PIN, 1); */
 
+    /*
     puts("Enabling bus transceivers...");
     gpio_init(BUSOE_PIN);
     gpio_set_dir(BUSOE_PIN, GPIO_OUT);
     gpio_put(BUSOE_PIN, 1);
+    */
 
     gpio_xor_mask(1u << LED_PIN);
 
@@ -278,5 +312,5 @@ int main()
         }
 #endif
     }
-    return 0;
+    for(;;) {}
 }
