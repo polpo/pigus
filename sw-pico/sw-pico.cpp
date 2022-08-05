@@ -166,7 +166,7 @@ int main()
 
 #ifdef PSRAM
     puts("Initing PSRAM...");
-    Psram::init(1000*1000*100);
+    Psram::init();
     puts("Writing PSRAM...");
     uint8_t deadbeef[8] = {0xd, 0xe, 0xa, 0xd, 0xb, 0xe, 0xe, 0xf};
     for (uint32_t addr = 0; addr < (1024 * 1024); ++addr) {
@@ -181,7 +181,6 @@ int main()
         */
     }
     puts("Reading PSRAM...");
-    Psram::set_baudrate(1000*1000*24);
     uint8_t psram_fail = 0;
     uint32_t psram_begin = time_us_32();
     for (uint32_t addr = 0; addr < (1024 * 1024); ++addr) {
@@ -190,6 +189,7 @@ int main()
         // printf("%x ", result16);
         // uint8_t result = (result16 >> 9) & 0xff;
         /* //printf("%x ", result); */
+        /*
         if (static_cast<uint8_t>((addr & 0xFF)) != result) {
             printf("\nPSRAM failure at address %x (%x != %x)\n", addr, addr & 0xFF, result);
             // return 1;
@@ -198,6 +198,7 @@ int main()
                 for(;;) {}
             }
         }
+        */
         /*
         if (addr >= 20) {
             return 1;

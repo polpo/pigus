@@ -1,0 +1,131 @@
+; SPI, customized as the PSRAM chips like to implement it:
+; Specifically, reads in high speed mode need an extra clock cycle to synchronize,
+; and reads are done on the falling edge of SCK
+.program spi_fudge
+.side_set 2 ; Sideset bit 0 is CS, bit 1 is SCK
+begin:
+    out x, 32           side 0b01
+    out y, 32           side 0b01
+    jmp x--, outloop    side 0b01
+outloop:
+    out pins, 1         side 0b00
+    jmp x--, outloop    side 0b10
+    jmp !y, begin       side 0b00
+    nop                 side 0b10       ; extra clock cycle; the PSRAM needs 1 extra for output to start appearing
+    jmp inloop_mid      side 0b00
+inloop:
+    in pins, 1          side 0b00
+inloop_mid:
+    jmp y--, inloop     side 0b10
+
+% c-sdk {
+#include "hardware/gpio.h"
+static inline void pio_spi_fudge_cs_init(PIO pio, uint sm, uint prog_offs, uint n_bits, float clkdiv, uint pin_cs, uint pin_mosi, uint pin_miso) {
+    pio_sm_config c = spi_fudge_program_get_default_config(prog_offs);
+    sm_config_set_out_pins(&c, pin_mosi, 1);
+    sm_config_set_in_pins(&c, pin_miso);
+    sm_config_set_sideset_pins(&c, pin_cs);
+    sm_config_set_out_shift(&c, false, true, n_bits);
+    sm_config_set_in_shift(&c, false, true, n_bits);
+    sm_config_set_clkdiv(&c, clkdiv);
+
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_cs, 2, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_mosi, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_miso, 1, false);
+    pio_gpio_init(pio, pin_mosi);
+    pio_gpio_init(pio, pin_cs);
+    pio_gpio_init(pio, pin_cs + 1);
+
+    hw_set_bits(&pio->input_sync_bypass, 1u << pin_miso);
+
+    pio_sm_init(pio, sm, prog_offs, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
+
+; !!!!! NOT WORKING !!!!!
+; "Quad SPI" as the PSRAM chips like to implement it:
+; Commands are sent only on SIO0, SI1-3 are Hi-Z
+; Address and data are sent/received on SIO0-3
+.program qspi
+.side_set 1
+
+; Pin assignments:
+; - SCK is side-set pin 0
+; - SIO0-3 is OUT and IN pins 0-3
+; 
+begin:
+; command - out on SI0 only, SI1-3 Hi-Z
+    set pindirs, 0x1    side 0
+; X - bytes to write (minus command
+    out x, 32           side 0  
+; Y - bytes to read
+    out y, 32           side 0
+command:
+    out pins, 4         side 0
+    nop                 side 1
+    out pins, 4         side 0
+    nop                 side 1
+    out pins, 4         side 0
+    nop                 side 1
+    out pins, 4         side 0
+    nop                 side 1
+    out pins, 4         side 0
+    nop                 side 1
+    out pins, 4         side 0
+    nop                 side 1
+    out pins, 4         side 0
+    nop                 side 1
+    out pins, 4         side 0
+    jmp !x begin        side 1
+; output data - all pins output
+    set pindirs, 0xf    side 0
+    jmp writecnd        side 0
+writeloop:
+; Output data
+    out pins, 4         side 0
+    nop                 side 1
+    out pins, 4         side 0
+writecnd:
+    jmp x-- writeloop   side 1
+    jmp !y begin        side 0
+; input data - all pins input
+    set pindirs, 0x0    side 0
+;    jmp readcnd         side 0
+readloop:
+    in pins, 4          side 1
+    nop                 side 0
+    in pins, 4          side 1
+readcnd:
+    ; jmp y-- readloop    side 0
+    nop                 side 0
+    
+
+% c-sdk {
+#include "hardware/gpio.h"
+static inline void pio_qspi_cs_init(PIO pio, uint sm, uint prog_offs, uint n_bits,
+        float clkdiv, uint pin_sck, uint pin_sio0) {
+    pio_sm_config c = qspi_program_get_default_config(prog_offs);
+    sm_config_set_out_pins(&c, pin_sio0, 4);
+    sm_config_set_set_pins(&c, pin_sio0, 4);
+    sm_config_set_in_pins(&c, pin_sio0);
+    sm_config_set_sideset_pins(&c, pin_sck);
+    // Only support MSB-first in this example code (shift to left, auto push/pull, threshold=nbits)
+    sm_config_set_out_shift(&c, false, true, n_bits);
+    sm_config_set_in_shift(&c, false, true, n_bits);
+    sm_config_set_clkdiv(&c, clkdiv);
+
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_sck, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_sio0, 4, false);
+    pio_sm_set_pins_with_mask(pio, sm, 0, (1u << pin_sck));
+    for (int i = pin_sio0; i < pin_sio0 + 4; ++i) {
+        pio_gpio_init(pio, i);
+    }
+
+    // SPI is synchronous, so bypass input synchroniser to reduce input delay.
+    hw_set_bits(&pio->input_sync_bypass, 0xfu << pin_sio0);
+
+    pio_sm_init(pio, sm, prog_offs, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}

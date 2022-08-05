@@ -13,15 +13,17 @@
 
 #include "pio_qspi.h"
 #include "spi.pio.h"
+
 /**
  * Super basic interface to SPI PSRAMs such as Espressif ESP-PSRAM64, apmemory APS6404L, IPUS IPS6404, Lyontek LY68L6400, etc.
  * NOTE that this abuses type punning to avoid shifts and masks to be as fast as possible!
  */
+
+/// Ridiculous conversion of uint8_t to uint32_t to pack into "QSPI" commands for PSRAM
 static constexpr uint32_t spi_to_qspi(uint8_t in) {
     /*
      *                         hgfedcba ->
      * 000b000a000d000c000f000e000h000g
-     * 000h000g000f000e000d000c000b000a
      */
     return 
         ((in & 0b10000000) >>  3) |
@@ -37,6 +39,7 @@ static constexpr uint32_t spi_to_qspi(uint8_t in) {
         ((in & 0b00000001) << 24)        
     ;
 };
+
 static pio_spi_inst_t spi;
 class Psram {
     private:
@@ -45,7 +48,7 @@ class Psram {
         static constexpr uint8_t write_cmd = 0x02u;
         static constexpr uint8_t read_fast_cmd = 0x0bu;
     public:
-        static void init(uint32_t baudrate) {
+        static void init(void) {
             // uint32_t reset_en_cmd32 = spi_to_qspi(reset_en_cmd);
             uint spi_offset = pio_add_program(pio0, &spi_fudge_program);
             uint spi_sm = pio_claim_unused_sm(pio0, true);
@@ -59,30 +62,17 @@ class Psram {
             gpio_set_slew_rate(PIN_SCK, GPIO_SLEW_RATE_FAST);
             gpio_set_slew_rate(PIN_MOSI, GPIO_SLEW_RATE_FAST);
 
-            pio_spi_fudge_cs_init(pio0, spi_sm, spi_offset, 8 /*n_bits*/, 1 /*clkdiv*/, PIN_SCK, PIN_MOSI, PIN_MISO);
+            pio_spi_fudge_cs_init(pio0, spi_sm, spi_offset, 8 /*n_bits*/, 1 /*clkdiv*/, PIN_CS, PIN_MOSI, PIN_MISO);
 
             // SPI initialisation.
             printf("Inited SPI PIO... at sm %d\n", spi.sm);
 
-            gpio_init(PIN_CS);
-            gpio_set_dir(PIN_CS, GPIO_OUT);
-            gpio_put(PIN_CS, 1);
-
             busy_wait_us(150);
-            gpio_put(PIN_CS, 0);
-            // pio_spi_write8_blocking(&spi, (unsigned char*)&reset_en_cmd32, 4);
             pio_spi_write_read_blocking(&spi, &reset_en_cmd, 1, nullptr, 0);
-            gpio_put(PIN_CS, 1);
             busy_wait_us(50);
-            gpio_put(PIN_CS, 0);
-            // pio_spi_write8_blocking(&spi, (unsigned char*)&reset_cmd32, 4);
             pio_spi_write_read_blocking(&spi, &reset_cmd, 1, nullptr, 0);
-            gpio_put(PIN_CS, 1);
             busy_wait_us(100);
         };
-
-        static void set_baudrate(uint32_t baudrate) {
-        }
 
         inline static void write8(uint32_t addr, uint8_t val) {
             unsigned char* addr_bytes = (unsigned char*)&addr;
@@ -94,16 +84,7 @@ class Psram {
                 val
             };
 
-            // printf("%x %x %x %x\n", command[0], command[1], command[2], command[3]);
-
-            // Select RAM chip
-            gpio_put(PIN_CS, 0);
-            // pio_spi_write8_blocking(&spi, (unsigned char*)&qwrite_cmd32, 4);
-            // pio_spi_write8_blocking(&spi, command, sizeof(command));
             pio_spi_write_read_blocking(&spi, command, sizeof(command), nullptr, 0);
-            // Deselect
-            busy_wait_us(10);
-            gpio_put(PIN_CS, 1);
         };
 
         inline static uint8_t read8(uint32_t addr) {
@@ -117,21 +98,7 @@ class Psram {
                 0,
             };
 
-            // Select RAM chip
-            gpio_put(PIN_CS, 0);
-            // pio_spi_write8_blocking(&spi, (unsigned char*)&qread_cmd32, 4);
-            // pio_spi_write8_blocking(&spi, command, sizeof(command));
-            // pio_spi_read8_blocking(&spi, &val, 1);
             pio_spi_write_read_blocking(&spi, command, sizeof(command), &val, 1);
-            /*
-            uint8_t val0[32];
-            pio_spi_read8_blocking(&spi, val0, 32);
-            for(int i = 0; i < 32; ++i) {
-                printf("%x ", val0[i]);
-            }
-            */
-            // Deselect
-            gpio_put(PIN_CS, 1);
             return val;
         };
 
@@ -147,12 +114,7 @@ class Psram {
                 *(val_bytes + 1)
             };
 
-            // Select RAM chip
-            gpio_put(PIN_CS, 0);
             pio_spi_write_read_blocking(&spi, command, sizeof(command), nullptr, 0);
-            // Deselect
-            busy_wait_us(10);
-            gpio_put(PIN_CS, 1);
         };
 
         inline static uint16_t read16(uint32_t addr) {
@@ -166,13 +128,7 @@ class Psram {
                 0
             };
 
-            // Select RAM chip
-            gpio_put(PIN_CS, 0);
-            // spi_write_blocking(SPI_PORT, command, sizeof(command));
-            // spi_read_blocking(SPI_PORT, 0, (unsigned char*)&val, 2);
             pio_spi_write_read_blocking(&spi, command, sizeof(command), (unsigned char*)&val, 2);
-            // Deselect
-            gpio_put(PIN_CS, 1);
             return val;
         };
 
@@ -191,12 +147,7 @@ class Psram {
                 *(val_bytes + 3)
             };
 
-            // Select RAM chip
-            gpio_put(PIN_CS, 0);
             pio_spi_write_read_blocking(&spi, command, sizeof(command), nullptr, 0);
-            // Deselect
-            busy_wait_us(10);
-            gpio_put(PIN_CS, 1);
         };
 
         inline static uint32_t read32(uint32_t addr) {
@@ -210,14 +161,7 @@ class Psram {
                 0
             };
 
-            // Select RAM chip
-            gpio_put(PIN_CS, 0);
-            // spi_write_blocking(SPI_PORT, command, 4);
-            // spi_read_blocking(SPI_PORT, 0, (unsigned char*)&val, 4);
             pio_spi_write_read_blocking(&spi, command, sizeof(command), (unsigned char*)&val, 4);
-            // Deselect
-            gpio_put(PIN_CS, 1);
             return val;
         };
 };
-
