@@ -8,3 +8,5 @@ kernel*.map
 *.EXE
 *.OBJ
 build
+fp-info-cache
+PicoGUS-backups
