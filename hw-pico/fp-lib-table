@@ -1,3 +1,0 @@
-(fp_lib_table
-  (lib (name "PiGUS library")(type "KiCad")(uri "${KIPRJMOD}/PiGUS library.pretty")(options "")(descr ""))
-)
